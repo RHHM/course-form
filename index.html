@@ -417,8 +417,9 @@
       <div>
         <h2>The course</h2>
         <p class="panel-intro">
-          Start here. If you'd like to see what a filled-in specification looks like before doing
-          your own, load the example — it fills every step and you can edit over it.
+          Start here. Seven steps, and it saves as you go, so you can leave and come back.
+          If you would rather see a finished specification first, loading the example fills
+          every step with a real course — edit over it or clear it and start again.
         </p>
       </div>
       <button type="button" class="btn-add" id="loadExample">Load example — Introduction to Game Theory</button>
@@ -733,6 +734,14 @@
 
   var state = {
     step: 0,
+    /* Steps the user has finished with — marked on leaving, not on arriving.
+       A blank form is not a form full of mistakes, and a step you are still
+       standing on is not one you have failed to complete. Flagging either
+       trains people to ignore the flags that matter. */
+    seen: {},
+    /* Reaching the review step means "I think I am done", and from then on
+       everything still missing is worth showing. */
+    reviewed: false,
     rigor: "advanced",
     units: [{ title: "", description: "", topics: "" }],
     outcomes: [""],
@@ -812,13 +821,20 @@
     errorSteps = validate(buildSpec()).errors.map(function (e) { return e.step; });
   }
 
+  /* Reaching the review step means "I think I am finished", so from then on
+     everything missing is worth showing, visited or not. Before that, only
+     what they have actually looked at. */
+  function showsProblem(step) {
+    return state.reviewed || !!state.seen[step];
+  }
+
   function renderRail() {
     refreshErrorSteps();
     var ol = $("rail");
     ol.textContent = "";
     STEPS.forEach(function (s, i) {
       var done = i < state.step && stepComplete(i);
-      var bad = errorSteps.indexOf(i) >= 0;
+      var bad = errorSteps.indexOf(i) >= 0 && showsProblem(i);
       var b = el("button", { type: "button", class: "step-btn" }, [
         el("span", { class: "num", text: String(i + 1).padStart(2, "0") }),
         el("span", {}, [
@@ -845,7 +861,13 @@
   }
 
   function go(i) {
-    state.step = Math.max(0, Math.min(STEPS.length - 1, i));
+    var from = state.step;
+    var to = Math.max(0, Math.min(STEPS.length - 1, i));
+    // Only a real move, and only after start-up — go(0) on load is not the
+    // user walking away from step one.
+    if (booted && to !== from) state.seen[from] = true;
+    state.step = to;
+    if (to === STEPS.length - 1) state.reviewed = true;
     STEPS.forEach(function (s, n) { $(s.id).hidden = n !== state.step; });
     $("backBtn").disabled = state.step === 0;
     $("nextBtn").hidden = state.step === STEPS.length - 1;
@@ -1455,7 +1477,8 @@
 
   function updateStatus() {
     var s = $("status");
-    var v = validate(buildSpec());
+    var all = validate(buildSpec());
+    var v = { errors: all.errors.filter(function (e) { return showsProblem(e.step); }) };
     /* The count is shown on every step, not only the last one, and clicking
        it goes to the list. Otherwise someone on step 3 has no way to find out
        what is missing without walking the whole form. */
@@ -1640,7 +1663,11 @@
   renderInPersonNote();
   renderRigor(); renderModes(); renderUnits(); renderOutcomes();
   renderAssignments(); renderTexts(); renderJournals();
-  if (!had) loadExample();
+  // The form starts empty. It used to fill itself with the worked example on
+  // a first visit, which meant anyone opening the link found a complete game
+  // theory course they had to delete before they could begin. The example is
+  // still one click away for anyone who wants to see the shape of a good
+  // specification first.
   booted = true;
   go(0);
 })();
