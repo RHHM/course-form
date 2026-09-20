@@ -180,6 +180,15 @@
   .hint { font-size: 13px; color: var(--ink-faint); max-width: 64ch; }
   .hint a, .panel-intro a { color: var(--accent); }
 
+  /* A checkbox inside .field would otherwise inherit the uppercase, bolded
+     section-label style and read as a heading rather than something to tick. */
+  .field > label.tick {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    font-size: 14px; font-weight: 400; letter-spacing: 0; text-transform: none;
+    color: var(--ink);
+  }
+  .tick input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+
   /* ---- per-outcome advice ---- */
   .advice { display: grid; gap: 4px; }
   .advice p { margin: 0; font-size: 12.5px; line-height: 1.5; }
@@ -204,6 +213,14 @@
     max-width: 100%;
   }
   textarea { line-height: 1.55; resize: vertical; min-height: 88px; font-family: var(--sans); }
+  /* Placed after the input rule above, not before: equal specificity means
+     source order decides, and the earlier version of this lost silently. */
+  input[type="text"]:disabled, textarea:disabled {
+    background: var(--surface-sunk);
+    color: var(--ink-faint);
+    border-style: dashed;
+    cursor: not-allowed;
+  }
   input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
@@ -569,8 +586,10 @@
       </div>
       <div class="field">
         <label for="f-coding">Coding language</label>
+        <label class="tick"><input type="checkbox" id="f-nocoding">
+          <span>This course involves no coding</span></label>
         <input type="text" id="f-coding" placeholder="Python">
-        <p class="hint">Only if you want coding workbooks.</p>
+        <p class="hint" id="codingHint">Only if you want coding workbooks.</p>
       </div>
       <div class="group">
         <span class="glabel">Required texts students must obtain</span>
@@ -738,6 +757,7 @@
        A blank form is not a form full of mistakes, and a step you are still
        standing on is not one you have failed to complete. Flagging either
        trains people to ignore the flags that matter. */
+    noCoding: false,
     seen: {},
     /* Reaching the review step means "I think I am done", and from then on
        everything still missing is worth showing. */
@@ -1146,6 +1166,39 @@
 
   /* Echo back what was understood. "1-5" reads as 1 and 5, not 1 through 5,
      and an instructor should find that out here rather than in the plans. */
+  /* "No coding" has to actually mean it. Leaving the language box live while
+     the box is ticked lets a contradictory specification through — a course
+     declared code-free that also names Python and asks for coding workbooks —
+     and the model then has to guess which instruction to believe. Ticking it
+     empties and locks the language, and takes the coding workbook off the
+     table of methods. */
+  function renderCoding() {
+    // The checkbox follows state, not the other way round: a restored draft
+    // repopulates text fields but not checkboxes, so this is what makes the
+    // setting survive a reload.
+    $("f-nocoding").checked = !!state.noCoding;
+    var off = state.noCoding;
+    var box = $("f-coding");
+    box.disabled = off;
+    if (off && box.value) box.value = "";
+    box.placeholder = off ? "not applicable" : "Python";
+    $("codingHint").textContent = off
+      ? "No programming will be assigned, and the coding workbook method is switched off below."
+      : "Only if you want coding workbooks.";
+
+    var chip = document.querySelector('#modes input[value="coding_workbook"]');
+    if (chip) {
+      chip.disabled = off;
+      if (off && chip.checked) {
+        chip.checked = false;
+        var at = state.modes.indexOf("coding_workbook");
+        if (at >= 0) state.modes.splice(at, 1);
+      }
+      chip.closest("label").style.opacity = off ? "0.4" : "";
+      chip.closest("label").title = off ? "Unavailable — this course is marked as involving no coding" : "";
+    }
+  }
+
   function renderInPersonNote() {
     var n = $("inpersonNote");
     if (!n) return;
@@ -1289,7 +1342,11 @@
     var modes = state.modes.concat(custom);
     if (modes.length) spec.modes = modes;
 
-    if ($("f-coding").value.trim()) spec.coding_language = $("f-coding").value.trim();
+    if ($("f-nocoding").checked) {
+      spec.no_coding = true;
+    } else if ($("f-coding").value.trim()) {
+      spec.coding_language = $("f-coding").value.trim();
+    }
 
     var inPerson = parseSessions($("f-inperson").value);
     if (inPerson.length) spec.in_person_sessions = inPerson;
@@ -1425,6 +1482,8 @@
       ["Participation", spec.participation ? spec.participation.weight + " of the grade" : "not graded separately"],
       ["Required texts", spec.required_texts ? spec.required_texts.length + " (students must obtain)" : "none — all readings free"],
       ["Journals to check", spec.proposed_journals ? spec.proposed_journals.length + " (sampled before use)" : "none"],
+      ["Coding", spec.no_coding ? "none — no programming in this course"
+        : (spec.coding_language ? spec.coding_language : "not specified")],
       ["Delivery", spec.in_person_sessions
         ? spec.in_person_sessions.length + " of 25 in a classroom (" + spec.in_person_sessions.join(", ") + "), rest online"
         : "all 25 sessions online"]
@@ -1535,12 +1594,14 @@
     state.journals = [];
     $("f-partweight").value = "";
     $("f-partdesc").value = "";
+    state.noCoding = false;   // the worked example is a course that does code
     $("f-coding").value = "Python";
     $("f-prior").value = "Introductory microeconomics. Comfort with basic probability. No calculus required.";
     $("f-constraints").value = "Class size around 18. Every session must end with something students can point to as the thing they now understand that they did not before.";
     $("f-notes").value = "I care more about students being able to say what a model assumes than about them solving it quickly. Avoid the standard prisoner's dilemma framing as the opening example — every student has met it and starting there makes the course feel like review. Students consistently struggle with mixed strategies, specifically with why anyone would randomize; attack it through indifference rather than the algebra. I would rather a session end with a genuine open question than with false closure.";
 
-    renderRigor(); renderUnits(); renderOutcomes(); renderAssignments(); renderTexts(); renderJournals(); renderModes();
+    renderRigor(); renderUnits(); renderOutcomes(); renderAssignments();
+    renderTexts(); renderJournals(); renderModes(); renderCoding();
     save();
     go(0);
   }
@@ -1559,6 +1620,11 @@
 
   $("nextBtn").addEventListener("click", function () { go(state.step + 1); });
   $("backBtn").addEventListener("click", function () { go(state.step - 1); });
+  $("f-nocoding").addEventListener("change", function () {
+    state.noCoding = $("f-nocoding").checked;
+    renderCoding();
+    save();
+  });
   $("loadExample").addEventListener("click", loadExample);
 
   /**
@@ -1661,7 +1727,7 @@
   // still exported. The form showed no texts and the JSON had them.
   var had = restore();
   renderInPersonNote();
-  renderRigor(); renderModes(); renderUnits(); renderOutcomes();
+  renderRigor(); renderModes(); renderCoding(); renderUnits(); renderOutcomes();
   renderAssignments(); renderTexts(); renderJournals();
   // The form starts empty. It used to fill itself with the worked example on
   // a first visit, which meant anyone opening the link found a complete game
