@@ -180,6 +180,9 @@
     letter-spacing: -0.005em;
   }
   .panel-intro { color: var(--ink-soft); margin: 0; max-width: 64ch; font-size: 14px; }
+  /* Two intro paragraphs in a row would otherwise butt together, because the
+     rule above zeroes the margin so a single one sits tight under its heading. */
+  .panel-intro + .panel-intro { margin-top: 9px; }
 
   .field { display: grid; gap: 6px; }
   .field > label, .group > .glabel {
@@ -497,6 +500,11 @@
         <p class="panel-intro">
           The generator paces these across 25 sessions. Active-learning sessions typically carry one
           or two topics, so aim for roughly 15–40 topics in total.
+        </p>
+        <p class="panel-intro">
+          Each unit is easiest to describe as <strong>the question it answers</strong>. That is how
+          the unit gets framed for students, and it is what keeps four units from blurring into one
+          long list of topics.
         </p>
       </div>
       <div class="group" id="units"></div>
@@ -942,7 +950,7 @@
     state.units.forEach(function (u, i) {
       var title = el("input", { type: "text", id: "unit-t-" + i, placeholder: "What this unit is called", value: u.title });
       title.addEventListener("input", function () { u.title = title.value; save(); countTopics(); });
-      var desc = el("input", { type: "text", id: "unit-d-" + i, placeholder: "What this unit accomplishes that the others do not", value: u.description });
+      var desc = el("input", { type: "text", id: "unit-d-" + i, placeholder: "The question this unit answers", value: u.description });
       desc.addEventListener("input", function () { u.description = desc.value; save(); });
       var tops = el("textarea", { id: "unit-p-" + i, rows: "3", placeholder: "One topic per line. These become the spine of the sessions in this unit, so be specific — a topic is something a session could be built around." });
       tops.value = u.topics;
@@ -959,7 +967,12 @@
         el("div", { class: "item-head" }, [
           el("span", { class: "tag", text: "Unit " + (i + 1) }), del
         ]),
-        title, desc,
+        el("div", { class: "field" }, [
+          el("label", { for: "unit-t-" + i, text: "Unit title" }), title
+        ]),
+        el("div", { class: "field" }, [
+          el("label", { for: "unit-d-" + i, text: "What this unit is for" }), desc
+        ]),
         el("div", { class: "field" }, [
           el("label", { for: "unit-p-" + i, text: "Topics" }), tops
         ])
