@@ -259,6 +259,11 @@
     text-transform: uppercase;
     color: var(--ink-faint);
   }
+  .live-block {
+    display: grid; gap: 10px; margin-top: 2px; padding: 12px 14px;
+    border-left: 3px solid var(--accent); background: var(--accent-wash);
+    border-radius: 0 6px 6px 0;
+  }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .row3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
 
@@ -542,6 +547,8 @@
         <p class="panel-intro">
           Leave the due session blank and the generator proposes a placement, marked as proposed.
           Weights are optional here; they appear in the syllabus if you give them.
+          Assignments are treated as take-home unless you say otherwise — an oral defense or an
+          in-class test takes up session time, and the generator needs to know which sessions.
         </p>
       </div>
       <div class="group" id="assignments"></div>
@@ -789,11 +796,52 @@
     rigor: "advanced",
     units: [{ title: "", description: "", topics: "" }],
     outcomes: [""],
-    assignments: [{ name: "", description: "", weight: "", due_session: "" }],
+    assignments: [newAssignment()],
     texts: [],
     journals: [],
     modes: []
   };
+
+  /* How an assignment is completed. Take-home is the default because most
+     assignments are, and because the two live kinds cost whole sessions: a
+     live assignment removes its sessions from the teaching plan entirely.
+     Values must match COMPLETION_MODES in src/inputs.js. */
+  var COMPLETION = [
+    { v: "take_home", n: "Take-home — students do it in their own time" },
+    { v: "live_oral", n: "Live oral defense, viva or interview" },
+    { v: "in_class_assessment", n: "In-class assessment (test, quiz, timed task)" }
+  ];
+  /* Only asked for oral defenses. With a written assessment everyone works at
+     once, so there is nobody waiting and no audience to give a task to. */
+  var AUDIENCE = [
+    { v: "all_with_task", n: "Everyone attends, with something to do" },
+    { v: "all_observing", n: "Everyone attends as audience" },
+    { v: "presenting_group_only", n: "Only the student or group being assessed" }
+  ];
+  function isLiveMode(v) { return v === "live_oral" || v === "in_class_assessment"; }
+  function newAssignment() {
+    return {
+      name: "", description: "", weight: "", due_session: "",
+      completed: "take_home", live_sessions: "", minutes: "", audience: "all_with_task"
+    };
+  }
+  /** "24, 25" and "24-25" both read as two sessions; anything out of range drops. */
+  function parseSessions(s) {
+    var out = [];
+    String(s || "").split(/[^0-9]+/).forEach(function (t) {
+      var n = parseInt(t, 10);
+      if (n >= 1 && n <= 25 && out.indexOf(n) === -1) out.push(n);
+    });
+    return out.sort(function (a, b) { return a - b; });
+  }
+  /** Which sessions an assignment occupies — mirrors liveSessionsFor(). */
+  function liveSessionsOf(a) {
+    if (!isLiveMode(a.completed)) return [];
+    var listed = parseSessions(a.live_sessions);
+    if (listed.length) return listed;
+    var d = parseInt(a.due_session, 10);
+    return (d >= 1 && d <= 25) ? [d] : [];
+  }
 
   var $ = function (id) { return document.getElementById(id); };
   var el = function (tag, attrs, kids) {
@@ -820,10 +868,17 @@
   var booted = false;
 
   function save() {
-    /* Every edit path already calls save(), so hanging the live count and the
-       rail flags off it means they cannot drift out of date — including when
-       a unit title is cleared three steps away from the review page. */
-    if (booted) { updateStatus(); renderRail(); }
+    /* Every edit path already calls save(), so hanging the derived displays
+       off it means they cannot drift out of date — including when a unit
+       title is cleared three steps away from the review page.
+
+       checkWeights() is here for a reason worth remembering: it reads the
+       participation weight as well as the assignment weights, but it used to
+       be called only from the assignment handlers. Typing a participation
+       weight therefore changed the total without updating the total, and the
+       warning appeared only once some unrelated assignment field was touched.
+       Anything that reads from more than one place belongs on this line. */
+    if (booted) { updateStatus(); renderRail(); checkWeights(); }
     try {
       localStorage.setItem(KEY, JSON.stringify({ state: state, fields: readFields() }));
       $("savedNote").textContent = "draft saved";
@@ -1148,6 +1203,12 @@
       var name = el("input", { type: "text", id: "as-n-" + i, placeholder: "What you call this assignment", value: a.name });
       name.addEventListener("input", function () { a.name = name.value; save(); });
       var weight = el("input", { type: "text", id: "as-w-" + i, placeholder: "% of the grade", value: a.weight });
+      // On the way out of the field, not while typing — rewriting "2" to "2%"
+      // mid-keystroke would fight someone heading for 20.
+      weight.addEventListener("blur", function () {
+        var fixed = asPercent(weight.value);
+        if (fixed !== weight.value) { weight.value = fixed; a.weight = fixed; save(); }
+      });
       weight.addEventListener("input", function () { a.weight = weight.value; save(); checkWeights(); });
       var due = el("input", { type: "number", id: "as-d-" + i, min: "1", max: "25", placeholder: "Session 1–25", value: a.due_session });
       due.addEventListener("input", function () { a.due_session = due.value; save(); });
@@ -1155,10 +1216,73 @@
       desc.value = a.description;
       desc.addEventListener("input", function () { a.description = desc.value; save(); });
 
+      /* Drafts saved before this field existed have no completion mode. They
+         were all take-home by definition, so say so rather than leaving the
+         select blank and the specification silently modeless. */
+      if (!a.completed) a.completed = "take_home";
+
+      var mode = el("select", { id: "as-c-" + i });
+      COMPLETION.forEach(function (c) {
+        var o = el("option", { value: c.v, text: c.n });
+        if (a.completed === c.v) o.selected = true;
+        mode.appendChild(o);
+      });
+
+      var sess = el("input", { type: "text", id: "as-s-" + i,
+        placeholder: "Blank = the due session", value: a.live_sessions || "" });
+      sess.addEventListener("input", function () { a.live_sessions = sess.value; save(); });
+
+      var mins = el("input", { type: "number", id: "as-m-" + i, min: "5", max: "75",
+        placeholder: "Blank = the whole session", value: a.minutes || "" });
+      mins.addEventListener("input", function () { a.minutes = mins.value; save(); });
+
+      var aud = el("select", { id: "as-a-" + i });
+      AUDIENCE.forEach(function (c) {
+        var o = el("option", { value: c.v, text: c.n });
+        if ((a.audience || "all_with_task") === c.v) o.selected = true;
+        aud.appendChild(o);
+      });
+      aud.addEventListener("change", function () { a.audience = aud.value; save(); });
+
+      var minsField = el("div", { class: "field" }, [
+        el("label", { for: "as-m-" + i, text: "Minutes it takes" }), mins]);
+      var audField = el("div", { class: "field" }, [
+        el("label", { for: "as-a-" + i, text: "Everyone else, meanwhile" }), aud]);
+      var liveNote = el("p", { class: "hint" });
+      var live = el("div", { class: "live-block" }, [
+        el("div", { class: "row2" }, [
+          el("div", { class: "field" }, [
+            el("label", { for: "as-s-" + i, text: "Sessions it takes up" }), sess]),
+          minsField
+        ]),
+        audField, liveNote
+      ]);
+
+      /* The consequence is the point of the field, so it is stated where the
+         choice is made: these sessions get a running order, not a lesson. */
+      function syncLive() {
+        var on = isLiveMode(a.completed);
+        live.hidden = !on;
+        minsField.hidden = a.completed !== "in_class_assessment";
+        audField.hidden = a.completed !== "live_oral";
+        if (!on) { liveNote.textContent = ""; return; }
+        var s = liveSessionsOf(a);
+        liveNote.textContent = s.length
+          ? "Session" + (s.length > 1 ? "s " : " ") + s.join(", ") +
+            (s.length > 1 ? " are" : " is") + " given over to this. No teaching is " +
+            "planned for " + (s.length > 1 ? "them" : "it") + " — the generator writes a " +
+            "running order instead."
+          : "No session named yet. Give a due session above, or list the sessions here.";
+      }
+      mode.addEventListener("change", function () { a.completed = mode.value; syncLive(); save(); });
+      sess.addEventListener("input", syncLive);
+      due.addEventListener("input", syncLive);
+      syncLive();
+
       var del = el("button", { type: "button", class: "btn-del", text: "Remove" });
       del.addEventListener("click", function () {
         state.assignments.splice(i, 1);
-        if (!state.assignments.length) state.assignments.push({ name: "", description: "", weight: "", due_session: "" });
+        if (!state.assignments.length) state.assignments.push(newAssignment());
         renderAssignments(); save(); checkWeights();
       });
 
@@ -1171,7 +1295,9 @@
           el("div", { class: "field" }, [el("label", { for: "as-w-" + i, text: "Weight" }), weight]),
           el("div", { class: "field" }, [el("label", { for: "as-d-" + i, text: "Due session" }), due])
         ]),
-        el("div", { class: "field" }, [el("label", { for: "as-x-" + i, text: "Description" }), desc])
+        el("div", { class: "field" }, [el("label", { for: "as-x-" + i, text: "Description" }), desc]),
+        el("div", { class: "field" }, [el("label", { for: "as-c-" + i, text: "How it is completed" }), mode]),
+        live
       ]));
     });
     checkWeights();
@@ -1338,6 +1464,19 @@
     return out.sort(function (a, b) { return a - b; });
   }
 
+  /**
+   * "20" and "20%" mean the same thing to a person and different things to a
+   * syllabus: the grading table prints whatever it is given, and a bare 20 in
+   * a table of percentages is ambiguous to a student. A value that is only a
+   * number gets its sign; anything else — "one fifth", "20 of 120 points" —
+   * is the instructor saying something the form should not overwrite.
+   */
+  function asPercent(v) {
+    var t = String(v == null ? "" : v).trim();
+    if (!t) return t;
+    return /^\d+(\.\d+)?$/.test(t) ? t + "%" : t;
+  }
+
   function buildSpec() {
     var spec = {
       course_title: $("f-title").value.trim(),
@@ -1361,9 +1500,21 @@
       .filter(function (a) { return a.name.trim(); })
       .map(function (a) {
         var o = { name: a.name.trim(), description: a.description.trim() };
-        if (a.weight.trim()) o.weight = a.weight.trim();
+        if (a.weight.trim()) o.weight = asPercent(a.weight);
         var d = parseInt(a.due_session, 10);
         if (!isNaN(d)) o.due_session = d;
+        /* Written even when take-home. It is the assumption most likely to be
+           made without noticing, and this file gets read by a person. */
+        o.completed = a.completed || "take_home";
+        if (isLiveMode(o.completed)) {
+          var s = parseSessions(a.live_sessions);
+          if (s.length) o.live_sessions = s;
+          if (o.completed === "in_class_assessment") {
+            var m = parseInt(a.minutes, 10);
+            if (m >= 1) o.minutes = Math.min(m, 75);
+          }
+          if (o.completed === "live_oral") o.audience = a.audience || "all_with_task";
+        }
         return o;
       });
 
@@ -1399,7 +1550,7 @@
       });
     if (journals.length) spec.proposed_journals = journals;
 
-    var pw = $("f-partweight").value.trim();
+    var pw = asPercent($("f-partweight").value);
     if (pw) {
       spec.participation = { weight: pw };
       var pd = $("f-partdesc").value.trim();
@@ -1433,6 +1584,30 @@
     if (!spec.learning_outcomes || !spec.learning_outcomes.length) err("At least one learning outcome is required.", 3, "out-0");
     if (!spec.assignments || !spec.assignments.length) err("At least one assignment is required.", 4, "as-n-0");
 
+    /* A live assessment naming no session reads as scheduled and occupies
+       nothing; two naming the same one collide on the day. Both are errors in
+       the generator, so they are errors here. */
+    var claimed = {};
+    (spec.assignments || []).forEach(function (a, i) {
+      if (!isLiveMode(a.completed)) return;
+      var s = (a.live_sessions && a.live_sessions.length)
+        ? a.live_sessions
+        : (a.due_session ? [a.due_session] : []);
+      if (!s.length) {
+        err("\"" + a.name + "\" is done live in class but names no session.", 4, "as-d-" + i);
+        return;
+      }
+      s.forEach(function (n) {
+        if (claimed[n] && claimed[n] !== a.name)
+          err("Session " + n + " is claimed by both \"" + claimed[n] + "\" and \"" + a.name + "\".", 4, "as-s-" + i);
+        claimed[n] = a.name;
+      });
+    });
+    var claimedCount = Object.keys(claimed).length;
+    if (claimedCount >= 5)
+      warnings.push(claimedCount + " of 25 sessions are given over to assessment, leaving " +
+        (25 - claimedCount) + " for teaching. Check that is what you intend.");
+
     var topics = (spec.units || []).reduce(function (a, u) { return a + u.topics.length; }, 0);
     if (topics && topics < 12) warnings.push("Only " + topics + " topics for 25 sessions — the generator will have to stretch them thin.");
     if (topics > 60) warnings.push(topics + " topics is roughly " + (topics / 25).toFixed(1) + " per session; expect some to be compressed or dropped.");
@@ -1465,6 +1640,18 @@
     node.focus({ preventScroll: true });
     node.classList.add("flash");
     setTimeout(function () { node.classList.remove("flash"); }, 1600);
+  }
+
+  /** Sessions the assignments take away from teaching, for the summary. */
+  function assessmentRow(spec) {
+    var out = [];
+    (spec.assignments || []).forEach(function (a) {
+      if (!isLiveMode(a.completed)) return;
+      var s = (a.live_sessions && a.live_sessions.length)
+        ? a.live_sessions : (a.due_session ? [a.due_session] : []);
+      if (s.length) out.push(a.name + ": session " + s.join(", "));
+    });
+    return out.length ? out.join(" · ") : "none — every assignment is take-home";
   }
 
   function renderReview() {
@@ -1507,6 +1694,7 @@
       ["Units", (spec.units || []).length + " · " + topics + " topics"],
       ["Outcomes", String((spec.learning_outcomes || []).length)],
       ["Assignments", String((spec.assignments || []).length)],
+      ["Live assessment", assessmentRow(spec)],
       ["Methods", spec.modes ? spec.modes.map(pretty).join(", ") : "chosen by discipline"],
       ["Participation", spec.participation ? spec.participation.weight + " of the grade" : "not graded separately"],
       ["Required texts", spec.required_texts ? spec.required_texts.length + " (students must obtain)" : "none — all readings free"],
@@ -1641,7 +1829,7 @@
     if (!add) return;
     if (add === "unit") { state.units.push({ title: "", description: "", topics: "" }); renderUnits(); }
     if (add === "outcome") { state.outcomes.push(""); renderOutcomes(); }
-    if (add === "assignment") { state.assignments.push({ name: "", description: "", weight: "", due_session: "" }); renderAssignments(); }
+    if (add === "assignment") { state.assignments.push(newAssignment()); renderAssignments(); }
     if (add === "text") { state.texts.push({ citation: "", url: "", note: "" }); renderTexts(); }
     if (add === "journal") { state.journals.push({ name: "", issn: "", policy_source: "" }); renderJournals(); }
     save();
@@ -1649,6 +1837,12 @@
 
   $("nextBtn").addEventListener("click", function () { go(state.step + 1); });
   $("backBtn").addEventListener("click", function () { go(state.step - 1); });
+  $("f-partweight").addEventListener("blur", function () {
+    var n = $("f-partweight");
+    var fixed = asPercent(n.value);
+    if (fixed !== n.value) { n.value = fixed; save(); }
+  });
+
   $("f-nocoding").addEventListener("change", function () {
     state.noCoding = $("f-nocoding").checked;
     renderCoding();
