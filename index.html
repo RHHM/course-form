@@ -1,0 +1,1647 @@
+<title>Course Specification Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --ground: #FBFAF8;
+    --surface: #FFFFFF;
+    --surface-sunk: #F4F1EC;
+    --ink: #1C1A17;
+    --ink-soft: #5F594F;
+    --ink-faint: #8B8478;
+    --rule: #E3DDD3;
+    --rule-firm: #CFC7B9;
+    --accent: #7A2E2E;
+    --accent-ink: #FFFFFF;
+    --accent-wash: #F6ECEA;
+    --ok: #2F5D50;
+    --warn: #8A5A1E;
+    --warn-wash: #FBF2E4;
+
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #171614;
+      --surface: #201E1B;
+      --surface-sunk: #1A1917;
+      --ink: #EDE9E2;
+      --ink-soft: #ADA598;
+      --ink-faint: #7E776B;
+      --rule: #322E29;
+      --rule-firm: #45403A;
+      --accent: #D98C86;
+      --accent-ink: #201E1B;
+      --accent-wash: #2B2220;
+      --ok: #7FB5A2;
+      --warn: #D2A45F;
+      --warn-wash: #2A2419;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #171614;
+    --surface: #201E1B;
+    --surface-sunk: #1A1917;
+    --ink: #EDE9E2;
+    --ink-soft: #ADA598;
+    --ink-faint: #7E776B;
+    --rule: #322E29;
+    --rule-firm: #45403A;
+    --accent: #D98C86;
+    --accent-ink: #201E1B;
+    --accent-wash: #2B2220;
+    --ok: #7FB5A2;
+    --warn: #D2A45F;
+    --warn-wash: #2A2419;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 40px;
+    max-width: 1060px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 36px 120px;
+    align-items: start;
+  }
+
+  /* ---- masthead ---- */
+  .masthead { grid-column: 1 / -1; border-bottom: 1px solid var(--rule-firm); padding-bottom: 20px; }
+  .masthead h1 {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 27px;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--ink-soft); max-width: 62ch; }
+  .stamp {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    padding: 2px 6px;
+    margin-bottom: 12px;
+  }
+
+  /* ---- step rail ---- */
+  nav.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); }
+  nav.rail ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .step-btn {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 10px;
+    align-items: baseline;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-left: 2px solid transparent;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-radius: 0 3px 3px 0;
+  }
+  .step-btn:hover { background: var(--surface-sunk); color: var(--ink); }
+  .step-btn[aria-current="step"] { border-left-color: var(--accent); color: var(--ink); font-weight: 600; background: var(--accent-wash); }
+  .step-btn .num { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .step-btn[aria-current="step"] .num { color: var(--accent); }
+  .step-btn .tick { color: var(--ok); font-size: 12px; }
+  .step-btn .flag {
+    color: var(--accent-ink); background: var(--accent);
+    font-size: 10px; font-weight: 700; font-family: var(--mono);
+    border-radius: 50%; padding: 0 5px; line-height: 15px; display: inline-block;
+  }
+
+  /* ---- fixable problem list ---- */
+  .fixlist { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+  .fixlink {
+    width: 100%; text-align: left; font: inherit; font-size: 13.5px;
+    background: none; border: 0; border-radius: 3px;
+    padding: 5px 7px; color: var(--ink); cursor: pointer;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  }
+  .fixlink:hover { background: var(--accent-wash); }
+  .fixlink:hover .fixgo, .fixlink:focus-visible .fixgo { opacity: 1; }
+  .fixgo { flex: 0 0 auto; font-size: 12px; color: var(--accent); opacity: 0.55; white-space: nowrap; }
+
+  /* A field jumped to from the problem list. Brief on purpose: findable
+     without becoming a permanent alarm once it has been filled in. */
+  @keyframes fieldflash {
+    from { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+    to   { border-color: var(--rule-firm); box-shadow: 0 0 0 0 transparent; }
+  }
+  .flash { animation: fieldflash 1.6s ease-out; }
+  @media (prefers-reduced-motion: reduce) { .flash { animation: none; border-color: var(--accent); } }
+
+  /* ---- panels ---- */
+  .panel { display: grid; gap: 22px; }
+  .panel h2 {
+    font-family: var(--serif);
+    font-size: 21px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: -0.005em;
+  }
+  .panel-intro { color: var(--ink-soft); margin: 0; max-width: 64ch; font-size: 14px; }
+
+  .field { display: grid; gap: 6px; }
+  .field > label, .group > .glabel {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .hint { font-size: 13px; color: var(--ink-faint); max-width: 64ch; }
+  .hint a, .panel-intro a { color: var(--accent); }
+
+  /* ---- per-outcome advice ---- */
+  .advice { display: grid; gap: 4px; }
+  .advice p { margin: 0; font-size: 12.5px; line-height: 1.5; }
+  .advice-ok { color: var(--ok); }
+  .advice-note {
+    color: var(--ink-soft);
+    border-left: 2px solid var(--warn);
+    background: var(--warn-wash);
+    padding: 5px 9px; border-radius: 0 3px 3px 0;
+  }
+  .req { color: var(--accent); font-weight: 600; }
+
+  input[type="text"], input[type="number"], textarea, select {
+    font: inherit;
+    font-size: 14.5px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule-firm);
+    border-radius: 3px;
+    padding: 9px 11px;
+    width: 100%;
+    max-width: 100%;
+  }
+  textarea { line-height: 1.55; resize: vertical; min-height: 88px; font-family: var(--sans); }
+  input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  /* ---- repeatable blocks ---- */
+  .group { display: grid; gap: 12px; }
+  .item {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 14px;
+    display: grid;
+    gap: 10px;
+  }
+  .item-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .item-head .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+
+  button {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 3px;
+    border: 1px solid var(--rule-firm);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 7px 13px;
+    font-size: 13.5px;
+  }
+  button:hover { border-color: var(--ink-faint); }
+  .btn-add { justify-self: start; border-style: dashed; color: var(--ink-soft); }
+  .btn-del { border: 0; background: none; color: var(--ink-faint); padding: 2px 6px; font-size: 12.5px; }
+  .btn-del:hover { color: var(--accent); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-primary[disabled] { opacity: 0.4; cursor: not-allowed; filter: none; }
+
+  /* ---- rigor cards ---- */
+  .rigor { display: grid; gap: 8px; }
+  .rigor label {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 11px;
+    align-items: start;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+  .rigor label:has(input:checked) { border-color: var(--accent); background: var(--accent-wash); }
+  .rigor input { margin-top: 4px; accent-color: var(--accent); }
+  .rigor strong { display: block; font-weight: 600; font-size: 14.5px; }
+  .rigor .rdesc { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+
+  /* ---- modes ---- */
+  .fam { border-top: 1px solid var(--rule); padding-top: 10px; }
+  .fam h4 {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 8px;
+    font-weight: 500;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { position: relative; }
+  .chip input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .chip span {
+    display: block;
+    border: 1px solid var(--rule-firm);
+    border-radius: 100px;
+    padding: 4px 11px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    background: var(--surface);
+  }
+  .chip input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- notices ---- */
+  .notice {
+    border-left: 2px solid var(--warn);
+    background: var(--warn-wash);
+    padding: 9px 12px;
+    font-size: 13.5px;
+    color: var(--ink);
+    border-radius: 0 3px 3px 0;
+  }
+  .notice.bad { border-left-color: var(--accent); background: var(--accent-wash); }
+  .notice.ok { border-left-color: var(--ok); background: var(--ok-wash, var(--surface-sunk)); }
+
+  /* ---- what happens next ----
+     Every direct child of a grid or flex item becomes its own box, and a bare
+     text node counts. The first version of this list put the text straight
+     inside each <li>, so the browser laid out one word per row. The content
+     lives in a single wrapper element for that reason. */
+  .steps-next { margin: 0; padding: 0; list-style: none; counter-reset: sn; display: flex; flex-direction: column; gap: 11px; }
+  .steps-next li { counter-increment: sn; display: flex; align-items: flex-start; gap: 11px; }
+  .steps-next li::before {
+    content: counter(sn);
+    flex: 0 0 20px;
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    color: var(--accent); background: var(--accent-wash);
+    border-radius: 50%; height: 20px; margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .steps-next .sn { font-size: 13.5px; line-height: 1.55; }
+  .steps-next .sn strong { font-weight: 600; }
+
+  .mailto-big {
+    display: block; font-family: var(--mono); font-size: 15px;
+    padding: 10px 12px; margin: 8px 0 0;
+    background: var(--surface-sunk); border: 1px solid var(--rule);
+    border-radius: 4px; color: var(--ink); text-decoration: none;
+    word-break: break-all;
+  }
+  .mailto-big:hover { border-color: var(--accent); color: var(--accent); }
+  .notice ul { margin: 4px 0 0; padding-left: 18px; }
+
+  /* ---- review ---- */
+  .summary { display: grid; gap: 0; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .srow { display: grid; grid-template-columns: 170px 1fr; gap: 14px; padding: 9px 14px; border-bottom: 1px solid var(--rule); background: var(--surface); }
+  .srow:last-child { border-bottom: 0; }
+  .srow dt { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); font-weight: 600; }
+  .srow dd { margin: 0; font-size: 14px; }
+  .srow dd .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  pre.json {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.5;
+    background: var(--surface-sunk);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 13px;
+    margin: 0;
+    max-height: 340px;
+    overflow: auto;
+    white-space: pre;
+  }
+
+  .cost { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .cost .fig { font-family: var(--mono); font-size: 22px; font-weight: 500; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+  /* ---- footer bar ---- */
+  .bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--rule-firm);
+    padding: 12px 20px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    z-index: 20;
+  }
+  .bar .spacer { flex: 1; }
+  .bar .status {
+    font-size: 13px; color: var(--ink-faint);
+    background: none; border: 0; padding: 3px 6px; border-radius: 3px;
+    font-family: inherit; cursor: default;
+  }
+  .bar .status.ready { color: var(--ok); }
+  /* When something is blocking the download, the count is the way back to
+     the list of what it is — from any step, not just the last one. */
+  .bar .status.clickable { cursor: pointer; color: var(--accent); text-decoration: underline; }
+  .bar .status.clickable:hover { background: var(--accent-wash); }
+
+  .saved { font-size: 12px; color: var(--ink-faint); font-family: var(--mono); }
+
+  @media (max-width: 760px) {
+    .shell { grid-template-columns: 1fr; gap: 24px; padding-block: 26px 130px; }
+    nav.rail { position: static; }
+    nav.rail ol { flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+    .step-btn { border-left: 0; border-bottom: 2px solid transparent; border-radius: 3px 3px 0 0; white-space: nowrap; grid-template-columns: auto auto; }
+    .step-btn[aria-current="step"] { border-left-color: transparent; border-bottom-color: var(--accent); }
+    .row2, .row3 { grid-template-columns: 1fr; }
+    .srow { grid-template-columns: 1fr; gap: 2px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="shell">
+  <header class="masthead">
+    <span class="stamp">RHHM LLC · Course tooling</span>
+    <h1>Course Specification Builder</h1>
+    <p>
+      Describe a 25-session course — each session 90 minutes, 75 planned and 15 held back for you.
+      This produces the specification file the generator reads. It is the only thing the model is
+      given about your course.
+    </p>
+  </header>
+
+  <nav class="rail" aria-label="Steps">
+    <ol id="rail"></ol>
+  </nav>
+
+  <main>
+    <section class="panel" id="p0">
+      <div>
+        <h2>The course</h2>
+        <p class="panel-intro">
+          Start here. If you'd like to see what a filled-in specification looks like before doing
+          your own, load the example — it fills every step and you can edit over it.
+        </p>
+      </div>
+      <button type="button" class="btn-add" id="loadExample">Load example — Introduction to Game Theory</button>
+
+      <div class="field">
+        <label for="f-title">Course title <span class="req">*</span></label>
+        <input type="text" id="f-title" placeholder="Introduction to Game Theory">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="f-discipline">Discipline <span class="req">*</span></label>
+          <input type="text" id="f-discipline" placeholder="undergraduate economics">
+          <p class="hint">Used to choose teaching methods suited to your field.</p>
+        </div>
+        <div class="field">
+          <label for="f-level">Level</label>
+          <input type="text" id="f-level" placeholder="second-year undergraduate, no calculus">
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-description">Course description <span class="req">*</span></label>
+        <textarea id="f-description" rows="5" placeholder="What the course is about and why these questions are worth a semester. Your framing carries through to the syllabus."></textarea>
+      </div>
+    </section>
+
+    <section class="panel" id="p1" hidden>
+      <div>
+        <h2>Rigor</h2>
+        <p class="panel-intro">
+          This changes the output more than anything else here. It sets where readings come from,
+          how much scaffolding a task carries, and whether a session may end with a question still
+          open.
+        </p>
+      </div>
+      <div class="rigor" id="rigor"></div>
+      <div class="notice">
+        Pitching below the room is the more common and more costly error. An under-pitched session
+        ends early with nothing left to do, and students stop preparing once they learn the
+        preparation wasn't needed.
+      </div>
+    </section>
+
+    <section class="panel" id="p2" hidden>
+      <div>
+        <h2>Units and topics</h2>
+        <p class="panel-intro">
+          The generator paces these across 25 sessions. Active-learning sessions typically carry one
+          or two topics, so aim for roughly 15–40 topics in total.
+        </p>
+      </div>
+      <div class="group" id="units"></div>
+      <button type="button" class="btn-add" data-add="unit">Add unit</button>
+      <div id="topicCount" class="hint"></div>
+    </section>
+
+    <section class="panel" id="p3" hidden>
+      <div>
+        <h2>Learning outcomes</h2>
+        <p class="panel-intro">
+          Used <strong>verbatim</strong> — never rewritten or renumbered. The generator checks each
+          one is advanced by at least two sessions and assessed by at least one assignment, and
+          reports the gaps rather than inventing content to fill them.
+        </p>
+      </div>
+      <div class="notice">
+        <strong>An outcome names something a student can be seen to do.</strong>
+        <p class="hint" style="margin:5px 0 0">
+          "Understand game theory" cannot be marked; "identify the assumption a result depends on
+          and construct a case where it fails" can. As you write, suggestions appear under each
+          one — they are advice, never a block, and an outcome you are happy with can stay exactly
+          as it is. The criteria come from Stanford's
+          <a href="https://teachingcommons.stanford.edu/teaching-guides/foundations-course-design/course-planning/creating-learning-outcomes"
+             target="_blank" rel="noopener">guide to creating learning outcomes</a>.
+        </p>
+      </div>
+      <div class="group" id="outcomes"></div>
+      <button type="button" class="btn-add" data-add="outcome">Add outcome</button>
+    </section>
+
+    <section class="panel" id="p4" hidden>
+      <div>
+        <h2>Assignments</h2>
+        <p class="panel-intro">
+          Leave the due session blank and the generator proposes a placement, marked as proposed.
+          Weights are optional here; they appear in the syllabus if you give them.
+        </p>
+      </div>
+      <div class="group" id="assignments"></div>
+      <button type="button" class="btn-add" data-add="assignment">Add assignment</button>
+      <div class="group" style="border-top:1px solid var(--rule); padding-top:18px;">
+        <span class="glabel">Class participation</span>
+        <p class="hint">
+          A grading bucket for in-class performance, assessed however you see fit. It is
+          deliberately <em>not</em> an assignment: it appears in the syllabus grading table and
+          changes nothing about how sessions or lesson plans are built.
+        </p>
+        <div class="row2">
+          <div class="field">
+            <label for="f-partweight">Weight</label>
+            <input type="text" id="f-partweight" placeholder="10%">
+          </div>
+          <div class="field">
+            <label for="f-partdesc">How you describe it to students</label>
+            <input type="text" id="f-partdesc" placeholder="Active contribution and preparedness in class">
+          </div>
+        </div>
+      </div>
+      <div id="weightCheck"></div>
+    </section>
+
+    <section class="panel" id="p5" hidden>
+      <div>
+        <h2>How you teach</h2>
+        <p class="panel-intro">
+          All optional. Leave the methods unselected and the generator picks ones suited to your
+          discipline — a literature seminar and a topology class shouldn't run the same way.
+        </p>
+      </div>
+      <div class="group">
+        <span class="glabel">In-class methods</span>
+        <div id="modes"></div>
+        <div class="field">
+          <label for="f-custommode">Something else your field does</label>
+          <input type="text" id="f-custommode" placeholder="chalk talk with interruption, moot court, ward round">
+          <p class="hint">Comma-separated. Named methods are used as given — the generator infers what they mean in your field.</p>
+        </div>
+      </div>
+      <div class="group">
+        <span class="glabel">Where the class meets</span>
+        <p class="hint">
+          Sessions are written for the live online platform unless you say
+          otherwise — instant breakout rooms, shared whiteboards, and polls that
+          can be multiple-choice or long-form, run individually or inside a
+          group. Plans treat it as a normal class with extra tools, not a
+          diminished one.
+        </p>
+        <div class="field">
+          <label for="f-inperson">Sessions taught in a physical classroom</label>
+          <input type="text" id="f-inperson" placeholder="1, 13, 25">
+          <p class="hint" id="inpersonNote">
+            Session numbers between 1 and 25, comma-separated. Leave blank if the whole
+            course is online. Those sessions are written for a standard classroom —
+            whiteboards, a projector, desks and movable chairs — and the facilitator
+            script changes accordingly.
+          </p>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-coding">Coding language</label>
+        <input type="text" id="f-coding" placeholder="Python">
+        <p class="hint">Only if you want coding workbooks.</p>
+      </div>
+      <div class="group">
+        <span class="glabel">Required texts students must obtain</span>
+        <p class="hint">
+          Including paid ones. These are trusted as given and never verified — you know what you
+          assigned. The generator may assign chapters from them but will never introduce a text
+          that costs students money on its own.
+        </p>
+        <div id="texts"></div>
+        <button type="button" class="btn-add" data-add="text">Add required text</button>
+      </div>
+      <div class="group">
+        <span class="glabel">Journals you know are free to read</span>
+        <p class="hint">
+          Only for journals the open-access databases get wrong. Some journals are given away by
+          their publisher but carry no open-access licence, so every database reports them as
+          paywalled and their articles get rejected. The <em>Journal of Economic Perspectives</em>
+          is the clearest case — free to anyone with a browser, invisible to every index.
+        </p>
+        <p class="hint">
+          Each one is checked before it is believed: articles are sampled from across the
+          journal's run and tested for a freely downloadable copy. A journal that passes is
+          remembered for every future course, yours and your colleagues'. One that fails is
+          reported and not used. You do not need to list ordinary open-access journals — those
+          already work.
+        </p>
+        <div id="journals"></div>
+        <button type="button" class="btn-add" data-add="journal">Add journal</button>
+      </div>
+      <div class="field">
+        <label for="f-prior">Assumed prior knowledge</label>
+        <textarea id="f-prior" rows="2" placeholder="Introductory microeconomics. Comfort with basic probability. No calculus."></textarea>
+      </div>
+      <div class="field">
+        <label for="f-constraints">Hard constraints</label>
+        <textarea id="f-constraints" rows="2" placeholder="Class size around 18. Every session must end with something students can point to."></textarea>
+      </div>
+      <div class="field">
+        <label for="f-notes">Anything else</label>
+        <textarea id="f-notes" rows="5" placeholder="Concepts students reliably struggle with. Examples to avoid because everyone has met them. Debates worth staging. Whether you prefer an open question to clean closure."></textarea>
+        <p class="hint">
+          Treated as authoritative about your intentions — it overrides the generator's generic
+          defaults where the two conflict. In testing this field changed the output more than any
+          other optional one.
+        </p>
+      </div>
+    </section>
+
+    <section class="panel" id="p6" hidden>
+      <div>
+        <h2>Review and send</h2>
+        <p class="panel-intro">Check it over, then send it to be generated.</p>
+      </div>
+      <div id="problems"></div>
+      <dl class="summary" id="summary"></dl>
+      <div class="group">
+        <span class="glabel">Estimated generation cost</span>
+        <div class="cost">
+          <span class="fig" id="costFig">—</span>
+          <span class="hint" id="costNote"></span>
+        </div>
+      </div>
+      <div class="group">
+        <div class="item-head">
+          <span class="glabel">course-specification.json</span>
+          <span style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-primary" id="dlBtn">Download JSON</button>
+          </span>
+        </div>
+        <div id="dlBlocked" hidden></div>
+        <div id="dlNote" hidden></div>
+        <pre class="json" id="jsonOut"></pre>
+        <p class="hint" id="exportHint"></p>
+      </div>
+
+      <div class="group">
+        <span class="glabel">Sending it</span>
+        <ol class="steps-next">
+          <li><span class="sn"><strong>Download the file</strong> using the button above. It
+            saves as <code id="dlName">course-specification.json</code>.</span></li>
+          <li><span class="sn"><strong>Email that file</strong> to the address below, as an
+            attachment. Nothing is submitted from this page — the email is the only thing that
+            moves, and nothing you typed leaves your browser until you send it.
+            <a class="mailto-big" id="sendTo" href="#">—</a></span></li>
+        </ol>
+      </div>
+
+      <div class="group">
+        <span class="glabel">What happens then</span>
+        <ol class="steps-next">
+          <li><span class="sn"><strong>Readings are proposed, then verified</strong> against
+            public bibliographic databases. Anything that cannot be confirmed to exist and to be
+            freely readable is listed with the reason rather than quietly dropped.</span></li>
+          <li><span class="sn"><strong>The syllabus and all 25 lesson plans are generated as one
+            batch.</strong> Batching halves the cost — roughly $10 of API credit per course
+            instead of $20 — in exchange for giving up immediate turnaround, which is a good
+            trade when nobody is watching a progress bar. Most batches finish inside an hour;
+            the service is allowed up to 24.</span></li>
+          <li><span class="sn"><strong>You get a personal email back</strong> with a Word
+            document: the syllabus, all 25 lesson plans, and an appendix recording every reading
+            that was checked and why it was kept or rejected. A person has to start the run and
+            look at the result, so expect a few days rather than the same afternoon.</span></li>
+        </ol>
+        <p class="hint">
+          None of it is ready to teach as-is. Treat it as a well-researched first draft that
+          still needs your judgment about your own students.
+        </p>
+      </div>
+
+    </section>
+  </main>
+</div>
+
+<div class="bar">
+  <button type="button" id="backBtn">Back</button>
+  <button type="button" class="btn-primary" id="nextBtn">Next</button>
+  <div class="spacer"></div>
+  <span class="saved" id="savedNote"></span>
+  <button type="button" class="status" id="status"></button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STEPS = [
+    { id: "p0", label: "The course" },
+    { id: "p1", label: "Rigor" },
+    { id: "p2", label: "Units" },
+    { id: "p3", label: "Outcomes" },
+    { id: "p4", label: "Assignments" },
+    { id: "p5", label: "How you teach" },
+    { id: "p6", label: "Review" }
+  ];
+
+  var RIGOR = [
+    { v: "introductory", n: "Introductory",
+      d: "First exposure. Open textbooks and explainers, worked examples, one idea per session, ambiguity resolved before the session ends." },
+    { v: "standard", n: "Standard undergraduate",
+      d: "Majors with the prerequisites. Textbooks plus accessible papers; tasks state the goal but not the method." },
+    { v: "advanced", n: "Advanced — selective institution",
+      d: "Strong students who arrive prepared and notice when a session is pitched below them. Primary literature by default; both sides of a live debate rather than a synthesis; a session may end with a question genuinely open." },
+    { v: "honors_seminar", n: "Honors seminar",
+      d: "Near-graduate. Primary literature only, including dissent. Students referee papers and design the study that would settle a dispute." }
+  ];
+
+  var MODE_FAMILIES = [
+    { fam: "Text-centred — humanities, ethics, law, theory",
+      modes: ["close_reading", "seminar_discussion", "socratic_questioning", "textual_comparison", "debate", "case_method"] },
+    { fam: "Formal and deductive — mathematics, logic, theoretical CS",
+      modes: ["proof_walkthrough", "derivation", "worked_example_critique", "counterexample_hunt"] },
+    { fam: "Empirical — natural and quantitative social sciences",
+      modes: ["predict_observe_explain", "data_interpretation", "error_analysis", "experiment_design"] },
+    { fam: "Studio and craft — art, design, architecture, writing",
+      modes: ["studio_critique", "peer_review_workshop", "iterative_making"] },
+    { fam: "Applied and situated — business, medicine, policy, engineering",
+      modes: ["role_play", "simulation", "clinical_reasoning", "negotiation"] },
+    { fam: "Cross-cutting — any field",
+      modes: ["poll", "breakout", "whiteboard", "think_pair_share", "jigsaw", "gallery_walk", "coding_workbook", "concept_clarification"] }
+  ];
+
+  var state = {
+    step: 0,
+    rigor: "advanced",
+    units: [{ title: "", description: "", topics: "" }],
+    outcomes: [""],
+    assignments: [{ name: "", description: "", weight: "", due_session: "" }],
+    texts: [],
+    journals: [],
+    modes: []
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = function (tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === "class") n.className = attrs[k];
+      else if (k === "text") n.textContent = attrs[k];
+      else if (k === "html") n.innerHTML = attrs[k];
+      else n.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (c) { n.appendChild(c); });
+    return n;
+  };
+  var pretty = function (m) { return m.replace(/_/g, " "); };
+
+  /* Where the finished specification is emailed. One place to change it. */
+  var RECIPIENT = "contact@rhhm.app";
+
+  /* ---------- persistence: a per-viewer convenience only ---------- */
+  var KEY = "sylgen.spec.draft.v1";
+  var saveTimer = null;
+  /* Set once the page has finished wiring itself up. Until then save() must
+     not try to re-render, because the elements it would touch may not exist. */
+  var booted = false;
+
+  function save() {
+    /* Every edit path already calls save(), so hanging the live count and the
+       rail flags off it means they cannot drift out of date — including when
+       a unit title is cleared three steps away from the review page. */
+    if (booted) { updateStatus(); renderRail(); }
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ state: state, fields: readFields() }));
+      $("savedNote").textContent = "draft saved";
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () { $("savedNote").textContent = ""; }, 1800);
+    } catch (e) { /* private window, blocked storage — the form still works */ }
+  }
+  function restore() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return false;
+      var d = JSON.parse(raw);
+      if (!d || !d.state) return false;
+      state = Object.assign(state, d.state);
+      state.step = 0;
+      writeFields(d.fields || {});
+      return true;
+    } catch (e) { return false; }
+  }
+
+  var TEXT_FIELDS = ["f-title", "f-discipline", "f-level", "f-description",
+    "f-custommode", "f-coding", "f-inperson", "f-prior", "f-constraints", "f-notes",
+    "f-partweight", "f-partdesc"];
+  function readFields() {
+    var o = {};
+    TEXT_FIELDS.forEach(function (id) { var n = $(id); if (n) o[id] = n.value; });
+    return o;
+  }
+  function writeFields(o) {
+    TEXT_FIELDS.forEach(function (id) { var n = $(id); if (n && o[id] != null) n.value = o[id]; });
+  }
+
+  /* ---------- rail ---------- */
+  /* Which steps still hold a blocking problem. Derived from validate() in one
+     place, so the rail and the review list cannot disagree about what is
+     wrong. */
+  var errorSteps = [];
+  function refreshErrorSteps() {
+    errorSteps = validate(buildSpec()).errors.map(function (e) { return e.step; });
+  }
+
+  function renderRail() {
+    refreshErrorSteps();
+    var ol = $("rail");
+    ol.textContent = "";
+    STEPS.forEach(function (s, i) {
+      var done = i < state.step && stepComplete(i);
+      var bad = errorSteps.indexOf(i) >= 0;
+      var b = el("button", { type: "button", class: "step-btn" }, [
+        el("span", { class: "num", text: String(i + 1).padStart(2, "0") }),
+        el("span", {}, [
+          document.createTextNode(s.label + " "),
+          bad ? el("span", { class: "flag", text: "!" })
+              : done ? el("span", { class: "tick", text: "✓" })
+              : document.createTextNode("")
+        ])
+      ]);
+      if (bad) b.title = "Something on this step still needs filling in";
+      if (i === state.step) b.setAttribute("aria-current", "step");
+      b.addEventListener("click", function () { go(i); });
+      ol.appendChild(el("li", {}, [b]));
+    });
+  }
+
+  function stepComplete(i) {
+    if (i === 0) return $("f-title").value.trim() && $("f-discipline").value.trim() && $("f-description").value.trim();
+    if (i === 1) return !!state.rigor;
+    if (i === 2) return state.units.some(function (u) { return u.title.trim() && u.topics.trim(); });
+    if (i === 3) return state.outcomes.some(function (o) { return o.trim(); });
+    if (i === 4) return state.assignments.some(function (a) { return a.name.trim() && a.description.trim(); });
+    return true;
+  }
+
+  function go(i) {
+    state.step = Math.max(0, Math.min(STEPS.length - 1, i));
+    STEPS.forEach(function (s, n) { $(s.id).hidden = n !== state.step; });
+    $("backBtn").disabled = state.step === 0;
+    $("nextBtn").hidden = state.step === STEPS.length - 1;
+    if (state.step === STEPS.length - 1) renderReview();
+    renderRail();
+    updateStatus();
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  /* ---------- rigor ---------- */
+  function renderRigor() {
+    var wrap = $("rigor");
+    wrap.textContent = "";
+    RIGOR.forEach(function (r) {
+      var input = el("input", { type: "radio", name: "rigor", value: r.v, id: "rigor-" + r.v });
+      if (state.rigor === r.v) input.checked = true;
+      input.addEventListener("change", function () {
+        state.rigor = r.v;
+        save();
+        renderRigor();
+        // Whether an outcome is pitched too low depends on the rigor level,
+        // so the advice under each one has to be recomputed when it changes.
+        renderOutcomes();
+      });
+      wrap.appendChild(el("label", { for: "rigor-" + r.v }, [
+        input,
+        el("span", {}, [el("strong", { text: r.n }), el("span", { class: "rdesc", text: r.d })])
+      ]));
+    });
+  }
+
+  /* ---------- repeatables ---------- */
+  function renderUnits() {
+    var wrap = $("units");
+    wrap.textContent = "";
+    state.units.forEach(function (u, i) {
+      var title = el("input", { type: "text", id: "unit-t-" + i, placeholder: "Static games and equilibrium", value: u.title });
+      title.addEventListener("input", function () { u.title = title.value; save(); countTopics(); });
+      var desc = el("input", { type: "text", id: "unit-d-" + i, placeholder: "What this unit accomplishes that the others do not", value: u.description });
+      desc.addEventListener("input", function () { u.description = desc.value; save(); });
+      var tops = el("textarea", { id: "unit-p-" + i, rows: "3", placeholder: "One topic per line:\nNash equilibrium\nMixed strategies\nDominance" });
+      tops.value = u.topics;
+      tops.addEventListener("input", function () { u.topics = tops.value; save(); countTopics(); });
+
+      var del = el("button", { type: "button", class: "btn-del", text: "Remove" });
+      del.addEventListener("click", function () {
+        state.units.splice(i, 1);
+        if (!state.units.length) state.units.push({ title: "", description: "", topics: "" });
+        renderUnits(); save(); countTopics();
+      });
+
+      wrap.appendChild(el("div", { class: "item" }, [
+        el("div", { class: "item-head" }, [
+          el("span", { class: "tag", text: "Unit " + (i + 1) }), del
+        ]),
+        title, desc,
+        el("div", { class: "field" }, [
+          el("label", { for: "unit-p-" + i, text: "Topics" }), tops
+        ])
+      ]));
+    });
+    countTopics();
+  }
+
+  function countTopics() {
+    var n = state.units.reduce(function (a, u) { return a + splitLines(u.topics).length; }, 0);
+    var node = $("topicCount");
+    if (!n) { node.textContent = ""; return; }
+    var per = (n / 25).toFixed(1);
+    var msg = n + " topics across 25 sessions — about " + per + " per session.";
+    if (n < 12) msg += " That's thin; the generator will have to stretch them.";
+    else if (n > 60) msg += " Active-learning sessions typically carry one or two, so expect some to be compressed.";
+    node.textContent = msg;
+  }
+
+  /* ---------- outcome quality: suggestions, never a block ----------
+     Criteria from Stanford's Teaching Commons guide on creating learning
+     outcomes. Only the checks that can be made precisely from the text are
+     implemented. Two things in that guide are deliberately NOT checked:
+
+     - The "students will be able to" stem. It is good advice for writing one
+       outcome and poor advice for writing eight, where repeating it in every
+       line is noise. The generator supplies the framing.
+     - "Condition" and "degree" (given a diagram..., to 80% accuracy). That
+       formalism suits competency training and reads as bureaucracy on a
+       seminar syllabus. Faculty would rightly ignore it, and a warning
+       everyone ignores makes the real warnings easier to ignore too. */
+
+  var VAGUE_VERBS = {
+    understand: "what would a student DO to show they understand it?",
+    understands: "what would a student DO to show they understand it?",
+    understanding: "what would a student DO to show they understand it?",
+    know: "knowing is invisible — name the action that reveals it",
+    knows: "knowing is invisible — name the action that reveals it",
+    "be aware of": "awareness cannot be assessed; what should they be able to do?",
+    appreciate: "appreciation cannot be marked; what would demonstrate it?",
+    "be familiar with": "familiarity cannot be assessed; what should they produce?",
+    "be exposed to": "exposure describes teaching, not learning",
+    grasp: "what would a student DO to show they have grasped it?",
+    comprehend: "what would a student DO to show they comprehend it?",
+    learn: "every outcome is something they learn; say what they can then do",
+    study: "studying is the activity, not the outcome",
+    "become acquainted with": "acquaintance cannot be assessed"
+  };
+
+  /* Bloom's levels, lowest first. Used only to notice when every outcome in
+     a demanding course sits at the bottom two levels. */
+  var BLOOM = [
+    { level: 1, name: "recall", verbs: ["define", "list", "name", "recall", "recite", "state", "label", "identify", "match", "repeat", "recognize", "recognise"] },
+    { level: 2, name: "understanding", verbs: ["describe", "explain", "summarize", "summarise", "paraphrase", "classify", "discuss", "report", "restate", "illustrate", "interpret"] },
+    { level: 3, name: "application", verbs: ["apply", "solve", "use", "compute", "calculate", "demonstrate", "implement", "execute", "carry", "operate", "model", "simulate", "derive"] },
+    { level: 4, name: "analysis", verbs: ["analyze", "analyse", "compare", "contrast", "differentiate", "distinguish", "examine", "test", "diagnose", "deconstruct", "trace", "attribute", "represent"] },
+    { level: 5, name: "evaluation", verbs: ["evaluate", "critique", "judge", "justify", "defend", "assess", "argue", "appraise", "adjudicate", "recommend", "prioritize", "prioritise", "refute", "challenge"] },
+    { level: 6, name: "creation", verbs: ["design", "construct", "create", "develop", "formulate", "compose", "devise", "generate", "propose", "produce", "build", "plan", "synthesize", "synthesise", "write"] }
+  ];
+
+  var VERB_LEVEL = (function () {
+    var m = {};
+    BLOOM.forEach(function (b) { b.verbs.forEach(function (v) { m[v] = b; }); });
+    return m;
+  })();
+
+  function words(t) {
+    return String(t || "").toLowerCase().replace(/[^a-z\s-]/g, " ").split(/\s+/).filter(Boolean);
+  }
+
+  /** Every Bloom verb found, with its level. */
+  function verbsIn(text) {
+    var found = [];
+    words(text).forEach(function (w) {
+      var hit = VERB_LEVEL[w];
+      if (hit && found.indexOf(hit) < 0) found.push(hit);
+    });
+    return found;
+  }
+
+  /**
+   * Suggestions for one outcome. Returns [] when nothing is worth saying.
+   * These never block the download — a warning an instructor disagrees with
+   * should cost them nothing to ignore.
+   */
+  function reviewOutcome(text, rigor) {
+    var t = String(text || "").trim();
+    if (!t) return [];
+    var out = [];
+    var lower = " " + t.toLowerCase() + " ";
+    var n = words(t).length;
+
+    var vague = false;
+    Object.keys(VAGUE_VERBS).forEach(function (v) {
+      var re = new RegExp("(^|[^a-z])" + v.replace(/ /g, "\\s+") + "([^a-z]|$)", "i");
+      if (re.test(lower)) {
+        vague = true;
+        out.push('"' + v + '" cannot be observed or marked — ' + VAGUE_VERBS[v]);
+      }
+    });
+
+    var verbs = verbsIn(t);
+    // Only when there is no verb at all. "Understand X" has a verb; saying it
+    // has none as well as saying the verb is unmarkable is two notes for one
+    // problem, and the second one is wrong.
+    if (!verbs.length && !vague && n >= 3) {
+      out.push("No action verb here — this reads as a topic rather than something a student can do. Start with a verb: analyze, construct, justify, compare.");
+    }
+
+    if (n < 6 && n >= 1) {
+      out.push("Very short. Vague outcomes produce vague sessions, because the generator has nothing to aim at.");
+    }
+
+    /* Deliberately reluctant. "Identify the assumption a result depends on,
+       construct a case where it fails, and defend it" is three verbs and one
+       coherent capability — exactly what a demanding course should ask for.
+       Flagging that as bloated would teach instructors to ignore this panel,
+       so the bar is set where an outcome is long enough that it is probably
+       a list rather than a chain. */
+    if (verbs.length >= 4 || n > 45) {
+      out.push("Long enough that it may be several outcomes in one. If the parts would be assessed separately, they are separate outcomes; if they are one chain of reasoning, leave it.");
+    }
+
+    if (verbs.length && (rigor === "advanced" || rigor === "honors_seminar")) {
+      var top = Math.max.apply(null, verbs.map(function (v) { return v.level; }));
+      if (top <= 2) {
+        out.push("At this rigor level, " + verbs.map(function (v) { return v.name; }).join(" / ") +
+          " is pitched low. Students who can only describe a result cannot break it, apply it where it fails, or argue against it.");
+      }
+    }
+    return out;
+  }
+
+  function renderOutcomes() {
+    var wrap = $("outcomes");
+    wrap.textContent = "";
+    state.outcomes.forEach(function (o, i) {
+      var ta = el("textarea", { id: "out-" + i, rows: "2", placeholder: "Represent a real strategic situation in strategic or extensive form, and justify the modeling choices made in doing so" });
+      ta.value = o;
+      var advice = el("div", { class: "advice" });
+      var refresh = function () {
+        var notes = reviewOutcome(ta.value, state.rigor);
+        advice.textContent = "";
+        if (!ta.value.trim()) return;
+        if (!notes.length) {
+          advice.appendChild(el("p", { class: "advice-ok", text: "\u2713 Reads as something a student can be seen to do." }));
+          return;
+        }
+        notes.forEach(function (msg) {
+          advice.appendChild(el("p", { class: "advice-note", text: msg }));
+        });
+      };
+      ta.addEventListener("input", function () { state.outcomes[i] = ta.value; refresh(); save(); });
+      var del = el("button", { type: "button", class: "btn-del", text: "Remove" });
+      del.addEventListener("click", function () {
+        state.outcomes.splice(i, 1);
+        if (!state.outcomes.length) state.outcomes.push("");
+        renderOutcomes(); save();
+      });
+      wrap.appendChild(el("div", { class: "item" }, [
+        el("div", { class: "item-head" }, [
+          el("span", { class: "tag", text: "Outcome " + (i + 1) }), del
+        ]), ta, advice
+      ]));
+      refresh();
+    });
+  }
+
+  function renderAssignments() {
+    var wrap = $("assignments");
+    wrap.textContent = "";
+    state.assignments.forEach(function (a, i) {
+      var name = el("input", { type: "text", id: "as-n-" + i, placeholder: "Modeling memo", value: a.name });
+      name.addEventListener("input", function () { a.name = name.value; save(); });
+      var weight = el("input", { type: "text", id: "as-w-" + i, placeholder: "20%", value: a.weight });
+      weight.addEventListener("input", function () { a.weight = weight.value; save(); checkWeights(); });
+      var due = el("input", { type: "number", id: "as-d-" + i, min: "1", max: "25", placeholder: "13", value: a.due_session });
+      due.addEventListener("input", function () { a.due_session = due.value; save(); });
+      var desc = el("textarea", { id: "as-x-" + i, rows: "2", placeholder: "What students actually do, and what it assesses" });
+      desc.value = a.description;
+      desc.addEventListener("input", function () { a.description = desc.value; save(); });
+
+      var del = el("button", { type: "button", class: "btn-del", text: "Remove" });
+      del.addEventListener("click", function () {
+        state.assignments.splice(i, 1);
+        if (!state.assignments.length) state.assignments.push({ name: "", description: "", weight: "", due_session: "" });
+        renderAssignments(); save(); checkWeights();
+      });
+
+      wrap.appendChild(el("div", { class: "item" }, [
+        el("div", { class: "item-head" }, [
+          el("span", { class: "tag", text: "Assignment " + (i + 1) }), del
+        ]),
+        el("div", { class: "row3" }, [
+          el("div", { class: "field" }, [el("label", { for: "as-n-" + i, text: "Name" }), name]),
+          el("div", { class: "field" }, [el("label", { for: "as-w-" + i, text: "Weight" }), weight]),
+          el("div", { class: "field" }, [el("label", { for: "as-d-" + i, text: "Due session" }), due])
+        ]),
+        el("div", { class: "field" }, [el("label", { for: "as-x-" + i, text: "Description" }), desc])
+      ]));
+    });
+    checkWeights();
+  }
+
+  function checkWeights() {
+    var node = $("weightCheck");
+    node.textContent = "";
+    var nums = state.assignments
+      .map(function (a) { return parseFloat(String(a.weight).replace("%", "")); })
+      .concat([parseFloat(String($("f-partweight").value).replace("%", ""))])
+      .filter(function (n) { return !isNaN(n); });
+    if (nums.length < 2) return;
+    var total = nums.reduce(function (a, b) { return a + b; }, 0);
+    if (Math.abs(total - 100) > 0.5) {
+      node.appendChild(el("div", { class: "notice", text:
+        "Weights given so far total " + total + "% (participation included). " +
+        "If these are your whole grade, they should come to 100." }));
+    }
+  }
+
+  /* Echo back what was understood. "1-5" reads as 1 and 5, not 1 through 5,
+     and an instructor should find that out here rather than in the plans. */
+  function renderInPersonNote() {
+    var n = $("inpersonNote");
+    if (!n) return;
+    var raw = ($("f-inperson").value || "").trim();
+    var list = parseSessions(raw);
+    if (!raw) {
+      n.textContent = "Blank means the whole course is online. Otherwise: session numbers " +
+        "between 1 and 25, comma-separated.";
+      return;
+    }
+    if (!list.length) {
+      n.textContent = "No session numbers recognised there — use numbers between 1 and 25, " +
+        "like 1, 13, 25. The course will be treated as fully online.";
+      return;
+    }
+    n.textContent = list.length + " session" + (list.length === 1 ? "" : "s") +
+      " in a classroom: " + list.join(", ") + ". The other " + (25 - list.length) +
+      " are written for the online platform.";
+  }
+
+  function renderJournals() {
+    var wrap = $("journals");
+    wrap.textContent = "";
+    state.journals.forEach(function (j, i) {
+      var name = el("input", { type: "text", id: "jr-n-" + i, placeholder: "Journal of Economic Perspectives", value: j.name });
+      name.addEventListener("input", function () { j.name = name.value; save(); });
+      var issn = el("input", { type: "text", id: "jr-i-" + i, placeholder: "ISSN, e.g. 0895-3309 (optional, but more reliable than the name)", value: j.issn });
+      issn.addEventListener("input", function () { j.issn = issn.value; save(); });
+      var pol = el("input", { type: "text", id: "jr-p-" + i, placeholder: "Link to where the publisher says it is free (optional)", value: j.policy_source });
+      pol.addEventListener("input", function () { j.policy_source = pol.value; save(); });
+      var del = el("button", { type: "button", class: "btn-del", text: "Remove" });
+      del.addEventListener("click", function () { state.journals.splice(i, 1); renderJournals(); save(); });
+
+      wrap.appendChild(el("div", { class: "item" }, [
+        el("div", { class: "item-head" }, [
+          el("span", { class: "tag", text: "Journal " + (i + 1) }), del
+        ]),
+        name,
+        el("div", { class: "row2" }, [issn, pol])
+      ]));
+    });
+    if (state.journals.length) {
+      wrap.appendChild(el("p", { class: "hint",
+        text: "Some publishers refuse automated requests, so sampling cannot confirm them either way. For those, the link above is what lets the journal be used at all — and the syllabus records that it rests on your attestation rather than a check." }));
+    }
+  }
+
+  function renderTexts() {
+    var wrap = $("texts");
+    wrap.textContent = "";
+    state.texts.forEach(function (t, i) {
+      var cite = el("input", { type: "text", id: "tx-c-" + i, placeholder: "Osborne, M. (2003). An Introduction to Game Theory. Oxford University Press.", value: t.citation });
+      cite.addEventListener("input", function () { t.citation = cite.value; save(); });
+      var url = el("input", { type: "text", id: "tx-u-" + i, placeholder: "https://… (optional)", value: t.url });
+      url.addEventListener("input", function () { t.url = url.value; save(); });
+      var note = el("input", { type: "text", id: "tx-n-" + i, placeholder: "Chapters 1–6 only (optional)", value: t.note });
+      note.addEventListener("input", function () { t.note = note.value; save(); });
+      var del = el("button", { type: "button", class: "btn-del", text: "Remove" });
+      del.addEventListener("click", function () { state.texts.splice(i, 1); renderTexts(); save(); });
+
+      wrap.appendChild(el("div", { class: "item" }, [
+        el("div", { class: "item-head" }, [
+          el("span", { class: "tag", text: "Text " + (i + 1) }), del
+        ]),
+        cite,
+        el("div", { class: "row2" }, [url, note])
+      ]));
+    });
+  }
+
+  function renderModes() {
+    var wrap = $("modes");
+    wrap.textContent = "";
+    MODE_FAMILIES.forEach(function (f) {
+      var chips = el("div", { class: "chips" });
+      f.modes.forEach(function (m) {
+        var input = el("input", { type: "checkbox", value: m, id: "mode-" + m });
+        if (state.modes.indexOf(m) >= 0) input.checked = true;
+        input.addEventListener("change", function () {
+          var at = state.modes.indexOf(m);
+          if (input.checked && at < 0) state.modes.push(m);
+          if (!input.checked && at >= 0) state.modes.splice(at, 1);
+          save();
+        });
+        chips.appendChild(el("label", { class: "chip" }, [input, el("span", { text: pretty(m) })]));
+      });
+      wrap.appendChild(el("div", { class: "fam" }, [el("h4", { text: f.fam }), chips]));
+    });
+  }
+
+  /* ---------- build the specification ---------- */
+  function splitLines(s) {
+    return String(s || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+  }
+
+  /* "1, 13, 25" or "1 13 25" or "1,13,25," — instructors type all of these.
+     Out-of-range and repeated numbers are dropped rather than passed along:
+     there is no session 0 and no session 26. */
+  function parseSessions(raw) {
+    var seen = {}, out = [];
+    String(raw || "").split(/[^0-9]+/).forEach(function (t) {
+      if (!t) return;
+      var n = parseInt(t, 10);
+      if (!(n >= 1 && n <= 25) || seen[n]) return;
+      seen[n] = true;
+      out.push(n);
+    });
+    return out.sort(function (a, b) { return a - b; });
+  }
+
+  function buildSpec() {
+    var spec = {
+      course_title: $("f-title").value.trim(),
+      discipline: $("f-discipline").value.trim(),
+      rigor: state.rigor,
+      description: $("f-description").value.trim()
+    };
+    if ($("f-level").value.trim()) spec.level = $("f-level").value.trim();
+
+    spec.units = state.units
+      .filter(function (u) { return u.title.trim() || u.topics.trim(); })
+      .map(function (u) {
+        var o = { title: u.title.trim(), topics: splitLines(u.topics) };
+        if (u.description.trim()) o.description = u.description.trim();
+        return o;
+      });
+
+    spec.learning_outcomes = state.outcomes.map(function (o) { return o.trim(); }).filter(Boolean);
+
+    spec.assignments = state.assignments
+      .filter(function (a) { return a.name.trim(); })
+      .map(function (a) {
+        var o = { name: a.name.trim(), description: a.description.trim() };
+        if (a.weight.trim()) o.weight = a.weight.trim();
+        var d = parseInt(a.due_session, 10);
+        if (!isNaN(d)) o.due_session = d;
+        return o;
+      });
+
+    var custom = $("f-custommode").value.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+    var modes = state.modes.concat(custom);
+    if (modes.length) spec.modes = modes;
+
+    if ($("f-coding").value.trim()) spec.coding_language = $("f-coding").value.trim();
+
+    var inPerson = parseSessions($("f-inperson").value);
+    if (inPerson.length) spec.in_person_sessions = inPerson;
+
+    var texts = state.texts.filter(function (t) { return (t.citation || "").trim(); }).map(function (t) {
+      var o = { citation: t.citation.trim() };
+      if ((t.url || "").trim()) o.url = t.url.trim();
+      if ((t.note || "").trim()) o.note = t.note.trim();
+      return o;
+    });
+    if (texts.length) spec.required_texts = texts;
+
+    var journals = state.journals
+      .filter(function (j) { return (j.name || "").trim() || (j.issn || "").trim(); })
+      .map(function (j) {
+        var o = {};
+        if ((j.name || "").trim()) o.name = j.name.trim();
+        if ((j.issn || "").trim()) o.issn = j.issn.trim();
+        if ((j.policy_source || "").trim()) o.policy_source = j.policy_source.trim();
+        return o;
+      });
+    if (journals.length) spec.proposed_journals = journals;
+
+    var pw = $("f-partweight").value.trim();
+    if (pw) {
+      spec.participation = { weight: pw };
+      var pd = $("f-partdesc").value.trim();
+      if (pd) spec.participation.description = pd;
+    }
+
+    if ($("f-prior").value.trim()) spec.prior_knowledge = $("f-prior").value.trim();
+    if ($("f-constraints").value.trim()) spec.constraints = $("f-constraints").value.trim();
+    if ($("f-notes").value.trim()) spec.additional_notes = $("f-notes").value.trim();
+
+    return spec;
+  }
+
+  /* Mirrors the generator's own validation, so problems surface here rather
+     than after someone has already sent the file on. */
+  function validate(spec) {
+    var errors = [], warnings = [];
+    /* Every error names the step it lives on and, where there is one, the
+       exact field. Saying what is wrong without saying where sends someone
+       hunting through seven steps for one missing sentence. */
+    var err = function (msg, step, field) { errors.push({ msg: msg, step: step, field: field }); };
+
+    if (!spec.course_title) err("Course title is missing.", 0, "f-title");
+    if (!spec.discipline) err("Discipline is missing.", 0, "f-discipline");
+    if (!spec.description) err("Course description is missing.", 0, "f-description");
+    if (!spec.units || !spec.units.length) err("At least one unit is required.", 2);
+    (spec.units || []).forEach(function (u, i) {
+      if (!u.title) err("Unit " + (i + 1) + " has no title.", 2, "unit-t-" + i);
+      if (!u.topics.length) err("Unit " + (i + 1) + " (" + (u.title || "untitled") + ") has no topics.", 2, "unit-p-" + i);
+    });
+    if (!spec.learning_outcomes || !spec.learning_outcomes.length) err("At least one learning outcome is required.", 3, "out-0");
+    if (!spec.assignments || !spec.assignments.length) err("At least one assignment is required.", 4, "as-n-0");
+
+    var topics = (spec.units || []).reduce(function (a, u) { return a + u.topics.length; }, 0);
+    if (topics && topics < 12) warnings.push("Only " + topics + " topics for 25 sessions — the generator will have to stretch them thin.");
+    if (topics > 60) warnings.push(topics + " topics is roughly " + (topics / 25).toFixed(1) + " per session; expect some to be compressed or dropped.");
+    if ((spec.learning_outcomes || []).length > 12) warnings.push("More than 12 outcomes tends to leave some under-assessed.");
+    (spec.learning_outcomes || []).forEach(function (o, i) {
+      reviewOutcome(o, spec.rigor).forEach(function (msg) {
+        warnings.push("Outcome " + (i + 1) + ": " + msg);
+      });
+    });
+    return { errors: errors, warnings: warnings };
+  }
+
+  /** Bring the list of what is wrong into view, from wherever the user is. */
+  function showProblems() {
+    if (state.step !== STEPS.length - 1) go(STEPS.length - 1);
+    var box = $("problems");
+    if (!box || !box.firstChild) return;
+    box.scrollIntoView({ block: "center", behavior: "smooth" });
+    var link = box.querySelector(".fixlink");
+    if (link) link.focus({ preventScroll: true });
+  }
+
+  /** Jump to the step holding a problem and put the cursor in the field. */
+  function goFix(step, field) {
+    go(step);
+    if (!field) return;
+    var node = $(field);
+    if (!node) return;
+    node.scrollIntoView({ block: "center", behavior: "smooth" });
+    node.focus({ preventScroll: true });
+    node.classList.add("flash");
+    setTimeout(function () { node.classList.remove("flash"); }, 1600);
+  }
+
+  function renderReview() {
+    var spec = buildSpec();
+    var v = validate(spec);
+
+    var prob = $("problems");
+    prob.textContent = "";
+    if (v.errors.length) {
+      var list = el("ul", { class: "fixlist" });
+      v.errors.forEach(function (e) {
+        var btn = el("button", { type: "button", class: "fixlink" }, [
+          document.createTextNode(e.msg),
+          el("span", { class: "fixgo", text: "Go to " + STEPS[e.step].label + " \u2192" })
+        ]);
+        btn.addEventListener("click", function () { goFix(e.step, e.field); });
+        list.appendChild(el("li", {}, [btn]));
+      });
+      prob.appendChild(el("div", { class: "notice bad" }, [
+        el("strong", { text: "Not ready yet — " + v.errors.length + " thing" +
+          (v.errors.length === 1 ? "" : "s") + " to fix" }),
+        el("p", { class: "hint", text: "Click any line to jump straight to it. " +
+          "The download unlocks once they are all cleared." }),
+        list
+      ]));
+    }
+    if (v.warnings.length) {
+      prob.appendChild(el("div", { class: "notice" }, [
+        el("strong", { text: "Worth a look" }),
+        el("ul", { html: v.warnings.map(function (e) { return "<li>" + e + "</li>"; }).join("") })
+      ]));
+    }
+
+    var rigorName = (RIGOR.filter(function (r) { return r.v === spec.rigor; })[0] || {}).n || spec.rigor;
+    var topics = (spec.units || []).reduce(function (a, u) { return a + u.topics.length; }, 0);
+    var rows = [
+      ["Course", spec.course_title || "—"],
+      ["Discipline", spec.discipline || "—"],
+      ["Rigor", rigorName],
+      ["Units", (spec.units || []).length + " · " + topics + " topics"],
+      ["Outcomes", String((spec.learning_outcomes || []).length)],
+      ["Assignments", String((spec.assignments || []).length)],
+      ["Methods", spec.modes ? spec.modes.map(pretty).join(", ") : "chosen by discipline"],
+      ["Participation", spec.participation ? spec.participation.weight + " of the grade" : "not graded separately"],
+      ["Required texts", spec.required_texts ? spec.required_texts.length + " (students must obtain)" : "none — all readings free"],
+      ["Journals to check", spec.proposed_journals ? spec.proposed_journals.length + " (sampled before use)" : "none"],
+      ["Delivery", spec.in_person_sessions
+        ? spec.in_person_sessions.length + " of 25 in a classroom (" + spec.in_person_sessions.join(", ") + "), rest online"
+        : "all 25 sessions online"]
+    ];
+    var dl = $("summary");
+    dl.textContent = "";
+    rows.forEach(function (r) {
+      dl.appendChild(el("div", { class: "srow" }, [
+        el("dt", { text: r[0] }), el("dd", { text: r[1] })
+      ]));
+    });
+
+    // The downloaded file gets emailed to a person, who would otherwise have
+    // to open it, find it cannot be generated, and write back to say so.
+    var db = $("dlBtn");
+    db.disabled = v.errors.length > 0;
+    db.title = v.errors.length
+      ? "Fix the problems listed above first — click any of them to jump there."
+      : "";
+
+    /* A greyed-out button with the explanation somewhere further up the page
+       is not an explanation. By the time you have scrolled to the button the
+       problem list is off screen, so the reason has to travel with it. */
+    var blocked = $("dlBlocked");
+    blocked.textContent = "";
+    blocked.hidden = v.errors.length === 0;
+    if (v.errors.length) {
+      var jump = el("button", { type: "button", class: "fixlink" }, [
+        document.createTextNode(
+          v.errors.length + (v.errors.length === 1 ? " thing needs" : " things need") +
+          " filling in before this can be downloaded."
+        ),
+        el("span", { class: "fixgo", text: "Show me \u2191" })
+      ]);
+      jump.addEventListener("click", showProblems);
+      blocked.appendChild(el("div", { class: "notice bad" }, [jump]));
+    }
+
+    // The instructions name the file the button will actually write.
+    $("dlName").textContent = specFilename();
+
+    $("costFig").textContent = v.errors.length ? "—" : "≈ $10";
+    $("costNote").textContent = v.errors.length
+      ? "Fix the problems above first."
+      : "for all 25 lesson plans with batching on, about $20 without. Measured from real runs.";
+
+    $("jsonOut").textContent = JSON.stringify(spec, null, 2);
+    updateStatus();
+  }
+
+  function updateStatus() {
+    var s = $("status");
+    var v = validate(buildSpec());
+    /* The count is shown on every step, not only the last one, and clicking
+       it goes to the list. Otherwise someone on step 3 has no way to find out
+       what is missing without walking the whole form. */
+    if (v.errors.length) {
+      s.textContent = v.errors.length + " thing" + (v.errors.length === 1 ? "" : "s") + " to fix";
+      s.className = "status clickable";
+      s.title = "See what is missing";
+      return;
+    }
+    if (state.step !== STEPS.length - 1) {
+      var left = STEPS.length - 1 - state.step;
+      s.textContent = left + (left === 1 ? " step left" : " steps left");
+      s.className = "status";
+      s.title = "";
+      return;
+    }
+    s.textContent = "Specification complete";
+    s.className = "status ready";
+    s.title = "";
+  }
+
+  /* ---------- example ---------- */
+  function loadExample() {
+    $("f-title").value = "Introduction to Game Theory";
+    $("f-discipline").value = "undergraduate economics";
+    $("f-level").value = "second-year undergraduate, no calculus assumed";
+    $("f-description").value = "Game theory is the study of how people and organizations behave when the best thing to do depends on what everyone else does. This course builds the core analytical toolkit — dominance, equilibrium, sequential reasoning, information asymmetry — and then puts it under pressure against evidence about how people actually behave.";
+    state.rigor = "advanced";
+    state.units = [
+      { title: "Static games and equilibrium", description: "The basic machinery: representing a strategic situation and solving it.",
+        topics: "Strategic form representation\nDominance and iterated elimination\nNash equilibrium in pure strategies\nMixed strategies\nCoordination games and multiple equilibria" },
+      { title: "Dynamic games", description: "What changes when moves happen in sequence.",
+        topics: "Extensive form and backward induction\nSubgame perfection\nCommitment and credible threats\nRepeated games and cooperation\nBargaining" },
+      { title: "Information", description: "Games where players know different things.",
+        topics: "Incomplete information and Bayesian games\nSignaling\nScreening and adverse selection\nAuctions\nMoral hazard" },
+      { title: "Behavioral limits", description: "Where the standard theory's predictions break down.",
+        topics: "Experimental evidence on the ultimatum game\nLevel-k reasoning\nSocial preferences and reciprocity\nLearning and convergence\nWhen equilibrium analysis is the wrong tool" }
+    ];
+    state.outcomes = [
+      "Represent a real strategic situation in strategic or extensive form, and justify the modeling choices made in doing so",
+      "Solve for equilibria using dominance, Nash equilibrium, backward induction, and subgame perfection, and explain what each solution concept assumes about players",
+      "Analyze how private information changes strategic outcomes, using signaling, screening, and auction settings",
+      "Evaluate experimental evidence on strategic behavior and assess where standard equilibrium predictions succeed and fail",
+      "Construct and critique an argument that applies game-theoretic reasoning to a policy or business decision"
+    ];
+    state.assignments = [
+      { name: "Problem sets", description: "Five sets, each following a unit, requiring students to model and solve strategic situations", weight: "30%", due_session: "" },
+      { name: "Modeling memo", description: "A 1500-word memo modeling a strategic situation of the student's choosing, stating assumptions explicitly and identifying where the model would fail", weight: "20%", due_session: "13" },
+      { name: "Experimental replication", description: "Students run a small strategic game with participants and account for any divergence from the equilibrium prediction", weight: "25%", due_session: "22" },
+      { name: "Final synthesis", description: "Take-home analysis applying multiple solution concepts to an unfamiliar case", weight: "25%", due_session: "25" }
+    ];
+    state.modes = ["poll", "breakout", "whiteboard", "coding_workbook"];
+    state.texts = [];
+    state.journals = [];
+    $("f-partweight").value = "";
+    $("f-partdesc").value = "";
+    $("f-coding").value = "Python";
+    $("f-prior").value = "Introductory microeconomics. Comfort with basic probability. No calculus required.";
+    $("f-constraints").value = "Class size around 18. Every session must end with something students can point to as the thing they now understand that they did not before.";
+    $("f-notes").value = "I care more about students being able to say what a model assumes than about them solving it quickly. Avoid the standard prisoner's dilemma framing as the opening example — every student has met it and starting there makes the course feel like review. Students consistently struggle with mixed strategies, specifically with why anyone would randomize; attack it through indifference rather than the algebra. I would rather a session end with a genuine open question than with false closure.";
+
+    renderRigor(); renderUnits(); renderOutcomes(); renderAssignments(); renderTexts(); renderJournals(); renderModes();
+    save();
+    go(0);
+  }
+
+  /* ---------- wiring ---------- */
+  document.addEventListener("click", function (e) {
+    var add = e.target.getAttribute && e.target.getAttribute("data-add");
+    if (!add) return;
+    if (add === "unit") { state.units.push({ title: "", description: "", topics: "" }); renderUnits(); }
+    if (add === "outcome") { state.outcomes.push(""); renderOutcomes(); }
+    if (add === "assignment") { state.assignments.push({ name: "", description: "", weight: "", due_session: "" }); renderAssignments(); }
+    if (add === "text") { state.texts.push({ citation: "", url: "", note: "" }); renderTexts(); }
+    if (add === "journal") { state.journals.push({ name: "", issn: "", policy_source: "" }); renderJournals(); }
+    save();
+  });
+
+  $("nextBtn").addEventListener("click", function () { go(state.step + 1); });
+  $("backBtn").addEventListener("click", function () { go(state.step - 1); });
+  $("loadExample").addEventListener("click", loadExample);
+
+  /**
+   * A web page cannot attach a file to an email — no browser API allows it,
+   * and a mailto: carries no attachment and truncates a long body silently.
+   * So there is one route: download the file, then attach it by hand. The
+   * page says exactly that rather than offering a button that half works.
+   */
+  function specFilename() {
+    var name = (buildSpec().course_title || "course")
+      .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50);
+    return (name || "course") + "-specification.json";
+  }
+
+  function note(msg, bad) {
+    var n = $("dlNote");
+    n.hidden = false;
+    n.className = "notice" + (bad ? " bad" : " ok");
+    n.textContent = msg;
+  }
+
+  /* An ordinary page saves a blob. Inside a published artifact the frame is
+     sandboxed and cannot, so the host saves on the page's behalf — the viewer
+     confirms, and may decline. Either way the button is real. */
+  function saveBlob(json, filename) {
+    var url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  var hostDownloads = null;
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("downloads").then(function (d) { hostDownloads = d; }, function () {});
+  }
+
+  $("status").addEventListener("click", function () {
+    if ($("status").className.indexOf("clickable") >= 0) showProblems();
+  });
+
+  $("dlBtn").addEventListener("click", function () {
+    var json = JSON.stringify(buildSpec(), null, 2);
+    var filename = specFilename();
+    var sent = "Saved as " + filename + ". Now attach it to an email to " + RECIPIENT + ".";
+
+    if (hostDownloads) {
+      hostDownloads.save({ filename: filename, data: json }).then(
+        function () { note(sent); },
+        function (err) {
+          var code = (err && err.code) || "unavailable";
+          if (code === "declined") return;
+          selectJSON();
+          note("The download could not be completed here (" + code + "). The specification is " +
+            "selected below instead — copy it, save it as " + filename + ", and email that " +
+            "to " + RECIPIENT + ".", true);
+        }
+      );
+      return;
+    }
+
+    try {
+      saveBlob(json, filename);
+      note(sent);
+    } catch (e) {
+      selectJSON();
+      note("Your browser blocked the download. The specification is selected below instead — " +
+        "copy it, save it as " + filename + ", and email that to " + RECIPIENT + ".", true);
+    }
+  });
+
+  var sendTo = $("sendTo");
+  sendTo.textContent = RECIPIENT;
+  sendTo.href = "mailto:" + RECIPIENT + "?subject=" + encodeURIComponent("Course specification");
+
+  /* Kept although the copy button is gone: when a download is refused there
+     is no other way to get the specification out, and it is already on screen. */
+  function selectJSON() {
+    var r = document.createRange();
+    r.selectNodeContents($("jsonOut"));
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+
+  TEXT_FIELDS.forEach(function (id) {
+    var n = $(id);
+    if (n) n.addEventListener("input", function () {
+      save();
+      if (id === "f-inperson") renderInPersonNote();
+    });
+  });
+
+  // Restore FIRST, then render. The other order rendered the empty defaults,
+  // and only units, outcomes and assignments were redrawn afterwards — so a
+  // saved draft's required texts were restored into `state`, never drawn, and
+  // still exported. The form showed no texts and the JSON had them.
+  var had = restore();
+  renderInPersonNote();
+  renderRigor(); renderModes(); renderUnits(); renderOutcomes();
+  renderAssignments(); renderTexts(); renderJournals();
+  if (!had) loadExample();
+  booted = true;
+  go(0);
+})();
+</script>
