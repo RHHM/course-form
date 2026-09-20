@@ -1,3 +1,7 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Course Specification Builder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -422,7 +426,12 @@
   .saved { font-size: 12px; color: var(--ink-faint); font-family: var(--mono); }
 
   @media (max-width: 760px) {
-    .shell { grid-template-columns: 1fr; gap: 24px; padding-block: 26px 130px; }
+    /* minmax(0, ...) and not 1fr: a grid track sized 1fr takes its minimum
+       from its content, so the step rail below — which is deliberately wider
+       than a phone and scrolls sideways on its own — would otherwise widen
+       the whole page instead, and every panel with it. The desktop rule has
+       the same guard on its content column for the same reason. */
+    .shell { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 26px 130px; }
     nav.rail { position: static; }
     nav.rail ol { flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
     .step-btn { border-left: 0; border-bottom: 2px solid transparent; border-radius: 3px 3px 0 0; white-space: nowrap; grid-template-columns: auto auto; }
@@ -1961,3 +1970,4 @@
   go(0);
 })();
 </script>
+</html>
