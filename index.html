@@ -62,6 +62,18 @@
 
   * { box-sizing: border-box; }
 
+  /* The `hidden` attribute hides an element through the browser's own
+     stylesheet, and ANY author rule that sets `display` outranks it — user
+     agent rules lose to author rules regardless of specificity. `.panel
+     { display: grid }` did exactly that, so every step of the form rendered
+     at once, stacked down the page, while the script correctly believed it
+     had hidden six of them. Navigation appeared to work only because moving
+     between steps scrolls to the top.
+
+     !important is deliberate: `hidden` means hidden, and this guard has to
+     survive any future rule that sets display on something carrying it. */
+  [hidden] { display: none !important; }
+
   body {
     background: var(--ground);
     color: var(--ink);
@@ -443,17 +455,17 @@
 
       <div class="field">
         <label for="f-title">Course title <span class="req">*</span></label>
-        <input type="text" id="f-title" placeholder="Introduction to Game Theory">
+        <input type="text" id="f-title" placeholder="The title students will see">
       </div>
       <div class="row2">
         <div class="field">
           <label for="f-discipline">Discipline <span class="req">*</span></label>
-          <input type="text" id="f-discipline" placeholder="undergraduate economics">
+          <input type="text" id="f-discipline" placeholder="The field and level — used to choose teaching methods that suit it">
           <p class="hint">Used to choose teaching methods suited to your field.</p>
         </div>
         <div class="field">
           <label for="f-level">Level</label>
-          <input type="text" id="f-level" placeholder="second-year undergraduate, no calculus">
+          <input type="text" id="f-level" placeholder="Which year, and anything assumed — optional">
         </div>
       </div>
       <div class="field">
@@ -536,11 +548,11 @@
         <div class="row2">
           <div class="field">
             <label for="f-partweight">Weight</label>
-            <input type="text" id="f-partweight" placeholder="10%">
+            <input type="text" id="f-partweight" placeholder="% of the grade">
           </div>
           <div class="field">
             <label for="f-partdesc">How you describe it to students</label>
-            <input type="text" id="f-partdesc" placeholder="Active contribution and preparedness in class">
+            <input type="text" id="f-partdesc" placeholder="How you would describe participation to students">
           </div>
         </div>
       </div>
@@ -560,7 +572,7 @@
         <div id="modes"></div>
         <div class="field">
           <label for="f-custommode">Something else your field does</label>
-          <input type="text" id="f-custommode" placeholder="chalk talk with interruption, moot court, ward round">
+          <input type="text" id="f-custommode" placeholder="Methods your field uses that are not listed above, comma-separated">
           <p class="hint">Comma-separated. Named methods are used as given — the generator infers what they mean in your field.</p>
         </div>
       </div>
@@ -575,7 +587,7 @@
         </p>
         <div class="field">
           <label for="f-inperson">Sessions taught in a physical classroom</label>
-          <input type="text" id="f-inperson" placeholder="1, 13, 25">
+          <input type="text" id="f-inperson" placeholder="Session numbers, comma-separated">
           <p class="hint" id="inpersonNote">
             Session numbers between 1 and 25, comma-separated. Leave blank if the whole
             course is online. Those sessions are written for a standard classroom —
@@ -588,7 +600,7 @@
         <label for="f-coding">Coding language</label>
         <label class="tick"><input type="checkbox" id="f-nocoding">
           <span>This course involves no coding</span></label>
-        <input type="text" id="f-coding" placeholder="Python">
+        <input type="text" id="f-coding" placeholder="The language students will write in">
         <p class="hint" id="codingHint">Only if you want coding workbooks.</p>
       </div>
       <div class="group">
@@ -621,11 +633,11 @@
       </div>
       <div class="field">
         <label for="f-prior">Assumed prior knowledge</label>
-        <textarea id="f-prior" rows="2" placeholder="Introductory microeconomics. Comfort with basic probability. No calculus."></textarea>
+        <textarea id="f-prior" rows="2" placeholder="What students are assumed to know walking in"></textarea>
       </div>
       <div class="field">
         <label for="f-constraints">Hard constraints</label>
-        <textarea id="f-constraints" rows="2" placeholder="Class size around 18. Every session must end with something students can point to."></textarea>
+        <textarea id="f-constraints" rows="2" placeholder="Hard requirements the generator must respect — class size, a rule you always follow"></textarea>
       </div>
       <div class="field">
         <label for="f-notes">Anything else</label>
@@ -928,11 +940,11 @@
     var wrap = $("units");
     wrap.textContent = "";
     state.units.forEach(function (u, i) {
-      var title = el("input", { type: "text", id: "unit-t-" + i, placeholder: "Static games and equilibrium", value: u.title });
+      var title = el("input", { type: "text", id: "unit-t-" + i, placeholder: "What this unit is called", value: u.title });
       title.addEventListener("input", function () { u.title = title.value; save(); countTopics(); });
       var desc = el("input", { type: "text", id: "unit-d-" + i, placeholder: "What this unit accomplishes that the others do not", value: u.description });
       desc.addEventListener("input", function () { u.description = desc.value; save(); });
-      var tops = el("textarea", { id: "unit-p-" + i, rows: "3", placeholder: "One topic per line:\nNash equilibrium\nMixed strategies\nDominance" });
+      var tops = el("textarea", { id: "unit-p-" + i, rows: "3", placeholder: "One topic per line. These become the spine of the sessions in this unit, so be specific — a topic is something a session could be built around." });
       tops.value = u.topics;
       tops.addEventListener("input", function () { u.topics = tops.value; save(); countTopics(); });
 
@@ -1085,7 +1097,7 @@
     var wrap = $("outcomes");
     wrap.textContent = "";
     state.outcomes.forEach(function (o, i) {
-      var ta = el("textarea", { id: "out-" + i, rows: "2", placeholder: "Represent a real strategic situation in strategic or extensive form, and justify the modeling choices made in doing so" });
+      var ta = el("textarea", { id: "out-" + i, rows: "2", placeholder: "Something a student can be seen to do. Start with a verb — analyze, construct, justify, compare — and say what they will do it to." });
       ta.value = o;
       var advice = el("div", { class: "advice" });
       var refresh = function () {
@@ -1120,11 +1132,11 @@
     var wrap = $("assignments");
     wrap.textContent = "";
     state.assignments.forEach(function (a, i) {
-      var name = el("input", { type: "text", id: "as-n-" + i, placeholder: "Modeling memo", value: a.name });
+      var name = el("input", { type: "text", id: "as-n-" + i, placeholder: "What you call this assignment", value: a.name });
       name.addEventListener("input", function () { a.name = name.value; save(); });
-      var weight = el("input", { type: "text", id: "as-w-" + i, placeholder: "20%", value: a.weight });
+      var weight = el("input", { type: "text", id: "as-w-" + i, placeholder: "% of the grade", value: a.weight });
       weight.addEventListener("input", function () { a.weight = weight.value; save(); checkWeights(); });
-      var due = el("input", { type: "number", id: "as-d-" + i, min: "1", max: "25", placeholder: "13", value: a.due_session });
+      var due = el("input", { type: "number", id: "as-d-" + i, min: "1", max: "25", placeholder: "Session 1–25", value: a.due_session });
       due.addEventListener("input", function () { a.due_session = due.value; save(); });
       var desc = el("textarea", { id: "as-x-" + i, rows: "2", placeholder: "What students actually do, and what it assesses" });
       desc.value = a.description;
@@ -1185,7 +1197,7 @@
     var box = $("f-coding");
     box.disabled = off;
     if (off && box.value) box.value = "";
-    box.placeholder = off ? "not applicable" : "Python";
+    box.placeholder = off ? "not applicable" : "The language students will write in";
     $("codingHint").textContent = off
       ? "No programming will be assigned, and the coding workbook method is switched off below."
       : "Only if you want coding workbooks.";
@@ -1227,9 +1239,9 @@
     var wrap = $("journals");
     wrap.textContent = "";
     state.journals.forEach(function (j, i) {
-      var name = el("input", { type: "text", id: "jr-n-" + i, placeholder: "Journal of Economic Perspectives", value: j.name });
+      var name = el("input", { type: "text", id: "jr-n-" + i, placeholder: "The journal's full name", value: j.name });
       name.addEventListener("input", function () { j.name = name.value; save(); });
-      var issn = el("input", { type: "text", id: "jr-i-" + i, placeholder: "ISSN, e.g. 0895-3309 (optional, but more reliable than the name)", value: j.issn });
+      var issn = el("input", { type: "text", id: "jr-i-" + i, placeholder: "ISSN — eight digits like 1234-5678 (optional, but matches more reliably than a name)", value: j.issn });
       issn.addEventListener("input", function () { j.issn = issn.value; save(); });
       var pol = el("input", { type: "text", id: "jr-p-" + i, placeholder: "Link to where the publisher says it is free (optional)", value: j.policy_source });
       pol.addEventListener("input", function () { j.policy_source = pol.value; save(); });
@@ -1254,7 +1266,7 @@
     var wrap = $("texts");
     wrap.textContent = "";
     state.texts.forEach(function (t, i) {
-      var cite = el("input", { type: "text", id: "tx-c-" + i, placeholder: "Osborne, M. (2003). An Introduction to Game Theory. Oxford University Press.", value: t.citation });
+      var cite = el("input", { type: "text", id: "tx-c-" + i, placeholder: "Full citation — author, year, title, publisher", value: t.citation });
       cite.addEventListener("input", function () { t.citation = cite.value; save(); });
       var url = el("input", { type: "text", id: "tx-u-" + i, placeholder: "https://… (optional)", value: t.url });
       url.addEventListener("input", function () { t.url = url.value; save(); });
