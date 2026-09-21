@@ -1300,7 +1300,7 @@
       });
 
       var sess = el("input", { type: "text", id: "as-s-" + i,
-        placeholder: "Blank = the due session", value: a.live_sessions || "" });
+        placeholder: "e.g. 24, 25 or 24-25", value: a.live_sessions || "" });
       sess.addEventListener("input", function () { a.live_sessions = sess.value; save(); });
 
       var mins = el("input", { type: "number", id: "as-m-" + i, min: "5", max: "75",
@@ -1614,6 +1614,12 @@
   }
 
   /* ---------- build the specification ---------- */
+  /* "6 units" rather than a bare 6: two numbers separated by a middot read as
+     one decimal, and "6 \u00b7 25 topics" was being read as 6.25 topics. */
+  function plural(n, word) {
+    return n + " " + word + (n === 1 ? "" : "s");
+  }
+
   function splitLines(s) {
     return String(s || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
   }
@@ -1877,7 +1883,7 @@
       ["Course", spec.course_title || "—"],
       ["Discipline", spec.discipline || "—"],
       ["Rigor", rigorName],
-      ["Units", (spec.units || []).length + " · " + topics + " topics"],
+      ["Units", plural((spec.units || []).length, "unit") + ", " + plural(topics, "topic")],
       ["Outcomes", String((spec.learning_outcomes || []).length)],
       ["Assignments", String((spec.assignments || []).length)],
       ["Live assessment", assessmentRow(spec)],
