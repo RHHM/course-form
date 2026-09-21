@@ -1,0 +1,16 @@
+This project includes data from the Library Proxy URL Database.
+
+    https://libproxy-db.org/
+    https://github.com/tom5760/ezproxy-db
+
+That data — the list of institutions and their library proxy URL patterns
+embedded in index.html — is licensed under Creative Commons
+Attribution-ShareAlike 4.0 International (CC BY-SA 4.0).
+
+    https://creativecommons.org/licenses/by-sa/4.0/
+
+It is community-contributed and individually untested. The form says so, and
+offers a one-click check, because an out-of-date proxy pattern produces a
+syllabus full of links that fail at the library sign-in.
+
+Everything else in this repository is © RHHM LLC and MIT licensed.
