@@ -464,12 +464,8 @@
         <h2>The course</h2>
         <p class="panel-intro">
           Start here. Seven steps, and it saves as you go, so you can leave and come back.
-          If you would rather see a finished specification first, loading the example fills
-          every step with a real course — edit over it or clear it and start again.
         </p>
       </div>
-      <button type="button" class="btn-add" id="loadExample">Load example — Introduction to Game Theory</button>
-
       <div class="field">
         <label for="f-title">Course title <span class="req">*</span></label>
         <input type="text" id="f-title" placeholder="The title students will see">
@@ -1972,53 +1968,6 @@
     s.title = "";
   }
 
-  /* ---------- example ---------- */
-  function loadExample() {
-    $("f-title").value = "Introduction to Game Theory";
-    $("f-discipline").value = "undergraduate economics";
-    $("f-level").value = "second-year undergraduate, no calculus assumed";
-    $("f-description").value = "Game theory is the study of how people and organizations behave when the best thing to do depends on what everyone else does. This course builds the core analytical toolkit — dominance, equilibrium, sequential reasoning, information asymmetry — and then puts it under pressure against evidence about how people actually behave.";
-    state.rigor = "advanced";
-    state.units = [
-      { title: "Static games and equilibrium", description: "The basic machinery: representing a strategic situation and solving it.",
-        topics: "Strategic form representation\nDominance and iterated elimination\nNash equilibrium in pure strategies\nMixed strategies\nCoordination games and multiple equilibria" },
-      { title: "Dynamic games", description: "What changes when moves happen in sequence.",
-        topics: "Extensive form and backward induction\nSubgame perfection\nCommitment and credible threats\nRepeated games and cooperation\nBargaining" },
-      { title: "Information", description: "Games where players know different things.",
-        topics: "Incomplete information and Bayesian games\nSignaling\nScreening and adverse selection\nAuctions\nMoral hazard" },
-      { title: "Behavioral limits", description: "Where the standard theory's predictions break down.",
-        topics: "Experimental evidence on the ultimatum game\nLevel-k reasoning\nSocial preferences and reciprocity\nLearning and convergence\nWhen equilibrium analysis is the wrong tool" }
-    ];
-    state.outcomes = [
-      "Represent a real strategic situation in strategic or extensive form, and justify the modeling choices made in doing so",
-      "Solve for equilibria using dominance, Nash equilibrium, backward induction, and subgame perfection, and explain what each solution concept assumes about players",
-      "Analyze how private information changes strategic outcomes, using signaling, screening, and auction settings",
-      "Evaluate experimental evidence on strategic behavior and assess where standard equilibrium predictions succeed and fail",
-      "Construct and critique an argument that applies game-theoretic reasoning to a policy or business decision"
-    ];
-    state.assignments = [
-      { name: "Problem sets", description: "Five sets, each following a unit, requiring students to model and solve strategic situations", weight: "30%", due_session: "" },
-      { name: "Modeling memo", description: "A 1500-word memo modeling a strategic situation of the student's choosing, stating assumptions explicitly and identifying where the model would fail", weight: "20%", due_session: "13" },
-      { name: "Experimental replication", description: "Students run a small strategic game with participants and account for any divergence from the equilibrium prediction", weight: "25%", due_session: "22" },
-      { name: "Final synthesis", description: "Take-home analysis applying multiple solution concepts to an unfamiliar case", weight: "25%", due_session: "25" }
-    ];
-    state.modes = ["poll", "breakout", "whiteboard", "coding_workbook"];
-    state.texts = [];
-    state.journals = [];
-    $("f-partweight").value = "";
-    $("f-partdesc").value = "";
-    state.noCoding = false;   // the worked example is a course that does code
-    $("f-coding").value = "Python";
-    $("f-prior").value = "Introductory microeconomics. Comfort with basic probability. No calculus required.";
-    $("f-constraints").value = "Class size around 18. Every session must end with something students can point to as the thing they now understand that they did not before.";
-    $("f-notes").value = "I care more about students being able to say what a model assumes than about them solving it quickly. Avoid the standard prisoner's dilemma framing as the opening example — every student has met it and starting there makes the course feel like review. Students consistently struggle with mixed strategies, specifically with why anyone would randomize; attack it through indifference rather than the algebra. I would rather a session end with a genuine open question than with false closure.";
-
-    renderRigor(); renderUnits(); renderOutcomes(); renderAssignments();
-    renderTexts(); renderJournals(); renderModes(); renderCoding();
-    save();
-    go(0);
-  }
-
   /* ---------- wiring ---------- */
   document.addEventListener("click", function (e) {
     var add = e.target.getAttribute && e.target.getAttribute("data-add");
@@ -2044,7 +1993,6 @@
     renderCoding();
     save();
   });
-  $("loadExample").addEventListener("click", loadExample);
 
   /**
    * A web page cannot attach a file to an email — no browser API allows it,
